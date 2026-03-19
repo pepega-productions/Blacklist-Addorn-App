@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blacklist Adornment Orders</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
+  header { background: linear-gradient(135deg, #16213e, #0f3460); padding: 18px 30px; border-bottom: 2px solid #e94560; }
+  header h1 { color: #e94560; font-size: 1.5em; }
+  header p { color: #a0a0c0; font-size: 0.82em; margin-top: 3px; }
+  .tab-bar { display: flex; background: #16213e; border-bottom: 2px solid #0f3460; }
+  .tab { padding: 12px 24px; cursor: pointer; color: #888; font-size: 0.9em; border-bottom: 3px solid transparent; transition: all 0.2s; user-select: none; }
+  .tab:hover { color: #e0e0e0; }
+  .tab.active { color: #e94560; border-bottom-color: #e94560; font-weight: bold; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .name-bar { background: #16213e; border: 1px solid #e94560; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+  .name-bar label { color: #c9a227; font-size: 0.9em; white-space: nowrap; }
+  .name-bar input { background: transparent; border: none; border-bottom: 1px solid #444; color: #e0e0e0; font-size: 1em; flex: 1; outline: none; padding: 2px 4px; }
+  .name-bar input::placeholder { color: #555; }
+  .search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-bar input, .search-bar select { background: #16213e; border: 1px solid #0f3460; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-size: 0.88em; flex: 1; min-width: 140px; }
+  .search-bar input::placeholder { color: #555; }
+  .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .item-card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 12px 70px 12px 14px; transition: border-color 0.2s; position: relative; }
+  .item-card:hover { border-color: #3a5080; }
+  .item-card.selected { border-color: #e94560; background: #1f2a4a; }
+  .item-card h3 { color: #c9a227; font-size: 0.87em; margin-bottom: 4px; line-height: 1.3; }
+  .item-card .slot { color: #7eb8f7; font-size: 0.72em; text-transform: uppercase; letter-spacing: 1px; }
+  .item-card .effect { color: #90ee90; font-size: 0.78em; margin: 3px 0; }
+  .item-card .crafter { color: #ff9a7b; font-size: 0.73em; }
+  .item-card .no-book { color: #ff6b6b; font-size: 0.7em; font-style: italic; }
+  .qty-control { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 4px; }
+  .qty-control button { background: #0f3460; border: 1px solid #e94560; color: #e94560; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 1em; line-height: 1; }
+  .qty-control button:hover { background: #e94560; color: white; }
+  .qty-display { background: #e94560; color: white; width: 28px; height: 22px; border-radius: 4px; text-align: center; line-height: 22px; font-size: 0.85em; font-weight: bold; }
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 680px) { .preview-grid { grid-template-columns: 1fr; } }
+  .result-box { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 14px; }
+  .result-box h2 { color: #c9a227; font-size: 0.95em; margin-bottom: 10px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
+  .crafter-section { margin-bottom: 12px; }
+  .crafter-section h3 { color: #ff9a7b; font-size: 0.87em; margin-bottom: 5px; }
+  .crafter-item { font-size: 0.8em; padding: 3px 0; border-bottom: 1px solid #1a2a4a; display: flex; justify-content: space-between; }
+  .crafter-item .item-name { color: #c9d6df; }
+  .qty-badge { background: #e94560; color: white; padding: 1px 6px; border-radius: 10px; font-size: 0.73em; flex-shrink: 0; }
+  .mat-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1a2a4a; font-size: 0.8em; }
+  .mat-row .mat-name { color: #c9d6df; }
+  .mat-row .mat-qty { color: #90ee90; font-weight: bold; }
+  .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.88em; font-weight: bold; transition: all 0.2s; }
+  .btn-primary { background: #e94560; color: white; width: 100%; margin-bottom: 8px; font-size: 0.95em; padding: 12px; }
+  .btn-primary:hover { background: #c73652; }
+  .btn-primary:disabled { background: #555; cursor: not-allowed; }
+  .btn-secondary { background: #0f3460; color: #7eb8f7; border: 1px solid #0f3460; }
+  .btn-secondary:hover { border-color: #7eb8f7; }
+  .btn-sm-danger { background: transparent; color: #e94560; border: 1px solid #e94560; font-size: 0.75em; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .btn-sm-danger:hover { background: #e94560; color: white; }
+  .btn-sm-complete { background: transparent; color: #90ee90; border: 1px solid #90ee90; font-size: 0.75em; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .btn-sm-complete:hover { background: #27ae60; color: white; border-color: #27ae60; }
+  .order-board { display: flex; flex-direction: column; gap: 14px; }
+  .order-card { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 16px; }
+  .order-card.completed { opacity: 0.5; border-color: #27ae60; }
+  .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 6px; }
+  .order-who { font-size: 1em; color: #c9a227; font-weight: bold; }
+  .order-time { font-size: 0.75em; color: #666; margin-top: 2px; }
+  .order-status { font-size: 0.75em; padding: 3px 10px; border-radius: 10px; }
+  .status-pending { background: #e9456022; color: #e94560; border: 1px solid #e94560; }
+  .status-done { background: #27ae6022; color: #90ee90; border: 1px solid #90ee90; }
+  .order-crafter-block { margin-bottom: 10px; }
+  .order-crafter-label { color: #ff9a7b; font-size: 0.82em; font-weight: bold; margin-bottom: 4px; }
+  .order-item-line { font-size: 0.8em; color: #c9d6df; padding: 2px 0 2px 10px; display: flex; align-items: center; gap: 6px; }
+  .order-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-bar select { background: #16213e; border: 1px solid #0f3460; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 0.85em; }
+  .filter-bar label { color: #888; font-size: 0.85em; }
+  .board-count { color: #888; font-size: 0.82em; margin-left: auto; }
+  .empty-state { text-align: center; color: #444; padding: 24px; font-size: 0.88em; grid-column: 1/-1; }
+  .empty-board { text-align: center; color: #444; padding: 50px 20px; font-size: 0.9em; line-height: 1.8; }
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px; border-radius: 6px; font-size: 0.85em; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; max-width: 300px; }
+  .toast.success { background: #27ae60; color: white; }
+  .toast.error { background: #e94560; color: white; }
+  .toast.show { opacity: 1; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ffffff44; border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .note { color: #666; font-size: 0.78em; margin-top: 6px; text-align: center; }
+  .divider { border: none; border-top: 1px solid #0f3460; margin: 18px 0; }
+  .orders-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 700px) { .orders-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚔️ Blacklist Adornment Orders</h1>
+  <p>Build your order · Submit to Discord · Track completion</p>
+</header>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('order')">🛒 Place Order</div>
+  <div class="tab" onclick="switchTab('board')">📋 Order Board<span id="pendingBadge"></span></div>
+</div>
+
+<!-- ORDER TAB -->
+<div id="tab-order" class="tab-content active">
+  <div class="container">
+    <div class="name-bar">
+      <label>⚔️ Your Name:</label>
+      <input type="text" id="playerName" placeholder="Enter your character name..." oninput="saveName()">
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search item name or effect..." oninput="filterItems()">
+      <select id="slotFilter" onchange="filterItems()"><option value="">All Slots</option></select>
+      <select id="crafterFilter" onchange="filterItems()"><option value="">All Crafters</option></select>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+    </div>
+    <div id="itemGrid" class="item-grid"></div>
+    <div id="previewSection" style="display:none">
+      <hr class="divider">
+      <div class="preview-grid">
+        <div class="result-box">
+          <h2>👷 Crafters to Contact</h2>
+          <div id="crafterOutput"></div>
+        </div>
+        <div class="result-box">
+          <h2>📦 Total Materials</h2>
+          <div id="materialsOutput"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="submitBtn" onclick="submitOrder()">📨 Submit Order to Discord</button>
+      <p class="note">Posts to #crafting and adds to the Order Board so crafters can see and track it.</p>
+    </div>
+  </div>
+</div>
+
+<!-- BOARD TAB -->
+<div id="tab-board" class="tab-content">
+  <div class="container">
+    <div class="filter-bar">
+      <label>Show:</label>
+      <select id="boardFilter" onchange="renderBoard()">
+        <option value="pending">Pending Only</option>
+        <option value="all">All Orders</option>
+        <option value="completed">Completed</option>
+      </select>
+      <select id="crafterBoardFilter" onchange="renderBoard()"><option value="">All Crafters</option></select>
+      <span class="board-count" id="boardCount"></span>
+      <button class="btn btn-secondary" onclick="loadOrders(true)" style="padding:7px 14px;font-size:0.82em;">🔄 Refresh</button>
+    </div>
+    <div id="orderBoard" class="order-board"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WEBHOOK = 'https://discord.com/api/webhooks/1484334832778481744/mSHuA6wyFA16LS3IDHWT8DrjYnXfaJHA8uBj0o-bHdhuAjv-BML4HNPTAj1DKTZ8zeM0';
+
+const recipes = [
+  {name:"Luminous Robust Applique",slot:"Chest",effect:"1 power regen",crafter:"Soprana aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby",powder:"4 Spectral Powder",fuel:"5 Beeswax Candle"},
+  {name:"Scint Prismatic Applique",slot:"Chest",effect:"6 to all stats",crafter:"Dillbert aka Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
+  {name:"Scint Metaphysical Lining",slot:"Cloak",effect:"3 Power Regen",crafter:"Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Rosewood Kindling"},
+  {name:"Scint Intellectual Backing",slot:"Ear",effect:"14 Int",crafter:"Crunchabunch",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Agile Spurs",slot:"Feet",effect:"14 Agi",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Gritty Spurs",slot:"Feet",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Glancing Splint",slot:"Forearm",effect:"7 Parry",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Reinforced Splint",slot:"Forearm",effect:"67 phys mit",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Savvy Splint",slot:"Forearm",effect:"14 Wis",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Lambent Fast Action Stitching",slot:"Hands",effect:"1 Ranged crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
+  {name:"Scint Agile Stitching",slot:"Hands",effect:"14 agi",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scint Occult Stitching",slot:"Hands",effect:"25 Spell damage",crafter:"Magis",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scint. Restorative Stitching",slot:"Hands",effect:"40 Increase healing",crafter:"Magis",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Lambent Blessed Imprint",slot:"Head",effect:"1 Heal crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
+  {name:"Scint. Epiphanic imprint",slot:"Head",effect:"100 power",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scint Brawny Brace",slot:"Legs",effect:"14 Str",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Gritty Brace",slot:"Legs",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Occult Clasp",slot:"Neck",effect:"25 increase spell damage",crafter:"UNAVAILABLE",hasBook:false,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Judicious Clasp",slot:"Neck",effect:"10 DPS",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Restorative Clasp",slot:"Neck",effect:"40 increase to heals",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Spry Clasp",slot:"Neck",effect:"2 Haste",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Tactical Clasp",slot:"Neck",effect:"1 Melee Crit",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Focus of the pontiff",slot:"Primary",effect:"85 Power from healing proc",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
+  {name:"Lambent Magi's Second Sight",slot:"Primary",effect:"1 Spell Crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
+  {name:"Scint. Clemency of Pontiff",slot:"Primary",effect:"40 Heals",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Pontiff Second Sight",slot:"Primary",effect:"1 Crit heal or ward",crafter:"Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Focus of Magi",slot:"Primary",effect:"85 Power proc",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mystical Incense"},
+  {name:"Scint. Balancing Ayr Stone",slot:"Primary",effect:"2.0% Riposte",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Deft Pommel",slot:"Primary",effect:"AE Autoattack 2H",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Proficient Shaft",slot:"Primary",effect:"3 Multiattack",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Judicious Easyloader",slot:"Thrown Only",effect:"10 DPS (Thrown)",crafter:"Magis",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scintillating Judicious Composite Gear",slot:"Ranged Only",effect:"10 DPS (Ranged/Bow)",crafter:"BigP",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Lambent Rugged Polish",slot:"Ring",effect:"70 Health",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl",powder:"1 Vision",fuel:"6 bayberry candles"},
+  {name:"Lambent Epiphanic Polish",slot:"Ring",effect:"70 Power",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl",powder:"1 Vision",fuel:"6 bayberry candles"},
+  {name:"Luminous Blessed Strut",slot:"Secondary Only",effect:"1% Heal Crit",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby",powder:"4 Spectral",fuel:"5 Diamond Sandpaper"},
+  {name:"Lambent Balanced Strut",slot:"Secondary Only",effect:"1% Block (Shield Only)",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Crystalline Sandpaper"},
+  {name:"Scint. Focus of the pontiff (2nd)",slot:"Secondary Only",effect:"85 Power from healing proc",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
+  {name:"Scint. Clemency of Pontiff (2nd)",slot:"Secondary Only",effect:"40 Heals",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Arcane Ornament",slot:"Secondary Only",effect:"25 arcane increase dmg",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint Elemental Ornament",slot:"Secondary Only",effect:"25 elemental increase",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scintillating Spiked Strut",slot:"Secondary Only",effect:"45 Piercing Dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint Glacial Ornament",slot:"Secondary or Ranged",effect:"45 Cold damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint Metaphysical Ornament",slot:"Secondary or Ranged",effect:"2 power regen",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint Molten Ornament",slot:"Secondary or Ranged",effect:"45 Heat damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Nox. Ornament",slot:"Secondary or Ranged",effect:"25 Nox damage",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Runic Ornament",slot:"Secondary or Ranged",effect:"45 magic damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Spellbound Ornament",slot:"Secondary or Ranged",effect:"1 spell crit",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint Telekinetic Ornament",slot:"Secondary or Ranged",effect:"45 mental damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Viral Ornament",slot:"Secondary or Ranged",effect:"45 disease dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Serpentine Ornament",slot:"Secondary or Ranged",effect:"45 poison dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Brawny Straps",slot:"Shoulder",effect:"14 str",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scint. Gritty Strap",slot:"Shoulder",effect:"14 sta",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scint. Rugged Straps",slot:"Shoulder",effect:"100 HP",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Scint. Fast Action buckle",slot:"Waist",effect:"1 ranged crit",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Spry Buckle",slot:"Waist",effect:"2 haste",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Oscillating Fastening",slot:"Wrist",effect:"Heal Reactive (Parry)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Reactive Fastening",slot:"Wrist",effect:"Heal Reactive (Riposte)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Diverting Fastening",slot:"Wrist",effect:"Heal Reactive (Deflect)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Brawny Fastening",slot:"Wrist",effect:"14 Str",crafter:"Nuggies",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Balanced Fastening",slot:"Wrist",effect:"2% Parry",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mystical Incense"},
+  {name:"Scint Intellectual Fastening",slot:"Wrist",effect:"14 Int",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+];
+
+const quantities = {};
+let orders = [];
+
+function parseMat(str) {
+  if (!str) return null;
+  const m = str.match(/^(\d+)\s+(.+)/);
+  return m ? {qty: parseInt(m[1]), name: m[2].trim()} : {qty: 1, name: str.trim()};
+}
+function addMat(totals, str, mult) {
+  if (!str) return;
+  const mat = parseMat(str);
+  const key = mat.name.toLowerCase();
+  if (!totals[key]) totals[key] = {name: mat.name, qty: 0};
+  totals[key].qty += mat.qty * mult;
+}
+function buildSummary() {
+  const byCrafter = {}, matTotals = {};
+  Object.entries(quantities).filter(([,v]) => v > 0).forEach(([idx, qty]) => {
+    const r = recipes[idx];
+    if (!byCrafter[r.crafter]) byCrafter[r.crafter] = [];
+    byCrafter[r.crafter].push({name: r.name, qty});
+    ['mana','infusion','fragment','powder','fuel'].forEach(k => addMat(matTotals, r[k], qty));
+  });
+  return {byCrafter, matTotals};
+}
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+function saveName() {
+  try { localStorage.setItem('bl_name', document.getElementById('playerName').value); } catch(e){}
+}
+function timeAgo(ts) {
+  const d = Date.now() - ts;
+  if (d < 60000) return 'just now';
+  if (d < 3600000) return Math.floor(d/60000) + 'm ago';
+  if (d < 86400000) return Math.floor(d/3600000) + 'h ago';
+  return Math.floor(d/86400000) + 'd ago';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['order','board'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'board') loadOrders();
+}
+
+// Build filter dropdowns
+const slots = [...new Set(recipes.map(r => r.slot))].sort();
+const crafters = [...new Set(recipes.map(r => r.crafter))].sort();
+slots.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; document.getElementById('slotFilter').appendChild(o); });
+crafters.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; document.getElementById('crafterFilter').appendChild(o); });
+crafters.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; document.getElementById('crafterBoardFilter').appendChild(o); });
+
+function filterItems() {
+  const s = document.getElementById('searchInput').value.toLowerCase();
+  const slot = document.getElementById('slotFilter').value;
+  const cr = document.getElementById('crafterFilter').value;
+  renderItems(recipes.filter(r =>
+    (!s || r.name.toLowerCase().includes(s) || r.effect.toLowerCase().includes(s)) &&
+    (!slot || r.slot === slot) && (!cr || r.crafter === cr)
+  ));
+}
+function renderItems(list) {
+  const grid = document.getElementById('itemGrid');
+  grid.innerHTML = '';
+  if (!list.length) { grid.innerHTML='<div class="empty-state">No items match your filter.</div>'; return; }
+  list.forEach(r => {
+    const idx = recipes.indexOf(r);
+    const qty = quantities[idx] || 0;
+    const card = document.createElement('div');
+    card.className = 'item-card' + (qty > 0 ? ' selected' : '');
+    card.innerHTML = `
+      <div class="slot">${r.slot}</div>
+      <h3>${r.name}</h3>
+      <div class="effect">✦ ${r.effect}</div>
+      <div class="crafter">🔨 ${r.crafter}</div>
+      ${!r.hasBook ? '<div class="no-book">⚠️ Book unavailable (Weaponsmith)</div>' : ''}
+      <div class="qty-control">
+        <button onclick="changeQty(${idx},-1,event)">−</button>
+        <div class="qty-display">${qty}</div>
+        <button onclick="changeQty(${idx},1,event)">+</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+function changeQty(idx, delta, e) {
+  e.stopPropagation();
+  quantities[idx] = Math.max(0, (quantities[idx]||0) + delta);
+  filterItems(); updatePreview();
+}
+function clearAll() {
+  Object.keys(quantities).forEach(k => delete quantities[k]);
+  filterItems(); updatePreview();
+}
+function updatePreview() {
+  const hasItems = Object.values(quantities).some(v => v > 0);
+  document.getElementById('previewSection').style.display = hasItems ? 'block' : 'none';
+  if (!hasItems) return;
+  const {byCrafter, matTotals} = buildSummary();
+  const co = document.getElementById('crafterOutput');
+  co.innerHTML = '';
+  Object.entries(byCrafter).sort().forEach(([cr, items]) => {
+    const sec = document.createElement('div');
+    sec.className = 'crafter-section';
+    sec.innerHTML = `<h3>✉️ ${cr}</h3>` +
+      items.map(i => `<div class="crafter-item"><span class="item-name">${i.name}</span><span class="qty-badge">x${i.qty}</span></div>`).join('');
+    co.appendChild(sec);
+  });
+  document.getElementById('materialsOutput').innerHTML = Object.values(matTotals)
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(m=>`<div class="mat-row"><span class="mat-name">${m.name}</span><span class="mat-qty">×${m.qty}</span></div>`).join('');
+}
+
+// ── Shared storage ──
+async function loadOrders(showFeedback=false) {
+  try {
+    const result = await window.storage.get('bl_orders', true);
+    orders = result ? JSON.parse(result.value) : [];
+  } catch(e) { orders = []; }
+  renderBoard();
+  updatePendingBadge();
+  if (showFeedback) showToast('Orders refreshed!');
+}
+async function saveOrders() {
+  try { await window.storage.set('bl_orders', JSON.stringify(orders), true); } catch(e){}
+}
+function updatePendingBadge() {
+  const n = orders.filter(o=>o.status==='pending').length;
+  document.getElementById('pendingBadge').textContent = n > 0 ? ` (${n})` : '';
+}
+
+// ── Submit ──
+async function submitOrder() {
+  const name = document.getElementById('playerName').value.trim();
+  if (!name) { showToast('Please enter your character name first!','error'); return; }
+  if (!Object.values(quantities).some(v=>v>0)) { showToast('No items selected!','error'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting...';
+
+  const {byCrafter, matTotals} = buildSummary();
+  const orderId = Date.now().toString();
+
+  // Discord message
+  let msg = `## 📦 New Adornment Order — **${name}**\n`;
+  Object.entries(byCrafter).sort().forEach(([cr, items]) => {
+    msg += `\n**✉️ ${cr}:**\n`;
+    items.forEach(i => msg += `> • ${i.name} ×${i.qty}\n`);
+  });
+  msg += `\n**📦 Materials needed:**\n`;
+  Object.values(matTotals).sort((a,b)=>a.name.localeCompare(b.name))
+    .forEach(m => msg += `> • ${m.name}: ×${m.qty}\n`);
+  msg += `\n*Use the Order Board to mark complete when done. Order ID: ${orderId}*`;
+
+  try {
+    const res = await fetch(WEBHOOK, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({content: msg, username: 'Blacklist Adorns'})
+    });
+    if (!res.ok && res.status !== 204) throw new Error(`Discord HTTP ${res.status}`);
+
+    // Save to shared order board
+    await loadOrders();
+    orders.unshift({id: orderId, player: name, timestamp: Date.now(), status: 'pending', byCrafter, matTotals});
+    await saveOrders();
+    updatePendingBadge();
+
+    clearAll();
+    showToast(`✅ Order posted to #crafting!`);
+    switchTab('board');
+  } catch(e) {
+    console.error(e);
+    showToast('Could not post to Discord. Check connection.','error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📨 Submit Order to Discord';
+  }
+}
+
+// ── Board ──
+function renderBoard() {
+  const filter = document.getElementById('boardFilter').value;
+  const crafterF = document.getElementById('crafterBoardFilter').value;
+  const filtered = orders.filter(o => {
+    if (filter==='pending' && o.status!=='pending') return false;
+    if (filter==='completed' && o.status!=='completed') return false;
+    if (crafterF && !o.byCrafter[crafterF]) return false;
+    return true;
+  });
+  document.getElementById('boardCount').textContent = `${filtered.length} order${filtered.length!==1?'s':''}`;
+  const board = document.getElementById('orderBoard');
+  if (!filtered.length) {
+    board.innerHTML = `<div class="empty-board">No orders here yet.<br><br>Guild members can submit orders using the <strong>Place Order</strong> tab — they'll show up here in real time.</div>`;
+    return;
+  }
+  board.innerHTML = '';
+  filtered.forEach(order => {
+    const card = document.createElement('div');
+    card.className = 'order-card' + (order.status==='completed' ? ' completed' : '');
+    const crafterHtml = Object.entries(order.byCrafter).sort().map(([cr, items]) => `
+      <div class="order-crafter-block">
+        <div class="order-crafter-label">✉️ ${cr}</div>
+        ${items.map(i=>`<div class="order-item-line">• ${i.name} <span class="qty-badge">×${i.qty}</span></div>`).join('')}
+      </div>`).join('');
+    card.innerHTML = `
+      <div class="order-header">
+        <div>
+          <div class="order-who">⚔️ ${order.player}</div>
+          <div class="order-time">${timeAgo(order.timestamp)}</div>
+        </div>
+        <span class="order-status ${order.status==='pending'?'status-pending':'status-done'}">
+          ${order.status==='pending'?'⏳ Pending':'✅ Complete'}
+        </span>
+      </div>
+      ${crafterHtml}
+      <div class="order-actions">
+        ${order.status==='pending' ? `<button class="btn-sm-complete" onclick="markComplete('${order.id}')">✅ Mark Complete</button>` : ''}
+        <button class="btn-sm-danger" onclick="deleteOrder('${order.id}')">🗑 Delete</button>
+      </div>`;
+    board.appendChild(card);
+  });
+}
+
+async function markComplete(id) {
+  const o = orders.find(o=>o.id===id);
+  if (!o) return;
+  o.status = 'completed';
+  await saveOrders();
+  renderBoard(); updatePendingBadge();
+  // Notify Discord
+  fetch(WEBHOOK, {method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({content:`✅ **${o.player}'s** adornment order has been marked **complete**!`, username:'Blacklist Adorns'})
+  }).catch(()=>{});
+  showToast(`${o.player}'s order marked complete!`);
+}
+async function deleteOrder(id) {
+  if (!confirm('Delete this order?')) return;
+  orders = orders.filter(o=>o.id!==id);
+  await saveOrders(); renderBoard(); updatePendingBadge();
+  showToast('Order deleted.');
+}
+
+// Init
+try { const n=localStorage.getItem('bl_name'); if(n) document.getElementById('playerName').value=n; } catch(e){}
+renderItems(recipes);
+loadOrders();
+</script>
+</body>
+</html>
