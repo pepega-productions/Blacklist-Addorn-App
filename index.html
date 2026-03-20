@@ -45,6 +45,9 @@
   .result-box h2 { color: #c9a227; font-size: 0.95em; margin-bottom: 10px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
   .crafter-section { margin-bottom: 12px; }
   .crafter-section h3 { color: #ff9a7b; font-size: 0.87em; margin-bottom: 5px; }
+  .crafter-mats-label { color: #7eb8f7; font-size: 0.75em; margin: 6px 0 3px; font-style: italic; }
+  .crafter-mat-row { display: flex; justify-content: space-between; padding: 2px 0 2px 8px; font-size: 0.77em; color: #a0b8c8; border-bottom: 1px solid #1a2a3a; }
+  .mat-qty-sm { color: #90ee90; font-weight: bold; }
   .crafter-item { font-size: 0.8em; padding: 3px 0; border-bottom: 1px solid #1a2a4a; display: flex; justify-content: space-between; }
   .crafter-item .item-name { color: #c9d6df; }
   .qty-badge { background: #e94560; color: white; padding: 1px 6px; border-radius: 10px; font-size: 0.73em; flex-shrink: 0; }
@@ -156,71 +159,88 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
 const WEBHOOK = 'https://discord.com/api/webhooks/1484334832778481744/mSHuA6wyFA16LS3IDHWT8DrjYnXfaJHA8uBj0o-bHdhuAjv-BML4HNPTAj1DKTZ8zeM0';
 
+// ── Firebase ──
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBSA7VIDkAtRRhzKp28heZxqziwX8Tlvqc",
+  authDomain: "adorn-app.firebaseapp.com",
+  databaseURL: "https://adorn-app-default-rtdb.firebaseio.com",
+  projectId: "adorn-app",
+  storageBucket: "adorn-app.firebasestorage.app",
+  messagingSenderId: "82293514925",
+  appId: "1:82293514925:web:e8f52a73d8631977399c24"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
 const recipes = [
-  {name:"Luminous Robust Applique",slot:"Chest",effect:"1 power regen",crafter:"Soprana aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby",powder:"4 Spectral Powder",fuel:"5 Beeswax Candle"},
-  {name:"Scint Prismatic Applique",slot:"Chest",effect:"6 to all stats",crafter:"Dillbert aka Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
-  {name:"Scint Metaphysical Lining",slot:"Cloak",effect:"3 Power Regen",crafter:"Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Rosewood Kindling"},
-  {name:"Scint Intellectual Backing",slot:"Ear",effect:"14 Int",crafter:"Crunchabunch",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Agile Spurs",slot:"Feet",effect:"14 Agi",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Gritty Spurs",slot:"Feet",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Glancing Splint",slot:"Forearm",effect:"7 Parry",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Reinforced Splint",slot:"Forearm",effect:"67 phys mit",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Savvy Splint",slot:"Forearm",effect:"14 Wis",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Lambent Fast Action Stitching",slot:"Hands",effect:"1 Ranged crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
-  {name:"Scint Agile Stitching",slot:"Hands",effect:"14 agi",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scint Occult Stitching",slot:"Hands",effect:"25 Spell damage",crafter:"Magis",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scint. Restorative Stitching",slot:"Hands",effect:"40 Increase healing",crafter:"Magis",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Lambent Blessed Imprint",slot:"Head",effect:"1 Heal crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
-  {name:"Scint. Epiphanic imprint",slot:"Head",effect:"100 power",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scint Brawny Brace",slot:"Legs",effect:"14 Str",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Gritty Brace",slot:"Legs",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Occult Clasp",slot:"Neck",effect:"25 increase spell damage",crafter:"UNAVAILABLE",hasBook:false,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Judicious Clasp",slot:"Neck",effect:"10 DPS",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Restorative Clasp",slot:"Neck",effect:"40 increase to heals",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Spry Clasp",slot:"Neck",effect:"2 Haste",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Tactical Clasp",slot:"Neck",effect:"1 Melee Crit",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Focus of the pontiff",slot:"Primary",effect:"85 Power from healing proc",weaponType:"Any Primary",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
-  {name:"Lambent Magi's Second Sight",slot:"Primary",effect:"1 Spell Crit",weaponType:"Any Weapon",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
-  {name:"Scint. Clemency of Pontiff",slot:"Primary",effect:"40 Heals",weaponType:"Any Primary",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Pontiff Second Sight",slot:"Primary",effect:"1 Crit heal or ward",weaponType:"Any Primary",crafter:"Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Rosewood Kindling"},
-  {name:"Scint. Focus of Magi",slot:"Primary",effect:"85 Power proc",weaponType:"Any Primary",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mystical Incense"},
-  {name:"Scint. Balancing Ayr Stone",slot:"Primary",effect:"2.0% Riposte",weaponType:"One-Handed Slashing",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Deft Pommel",slot:"Primary",effect:"AE Autoattack 2H",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Proficient Shaft",slot:"Primary",effect:"3 Multiattack",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Judicious Easyloader",slot:"Thrown Only",effect:"10 DPS (Thrown)",crafter:"Magis",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scintillating Judicious Composite Gear",slot:"Ranged Only",effect:"10 DPS (Ranged/Bow)",crafter:"BigP",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Lambent Rugged Polish",slot:"Ring",effect:"70 Health",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl",powder:"1 Vision",fuel:"6 bayberry candles"},
-  {name:"Lambent Epiphanic Polish",slot:"Ring",effect:"70 Power",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl",powder:"1 Vision",fuel:"6 bayberry candles"},
-  {name:"Luminous Blessed Strut",slot:"Secondary Only",effect:"1% Heal Crit",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby",powder:"4 Spectral",fuel:"5 Diamond Sandpaper"},
-  {name:"Lambent Balanced Strut",slot:"Secondary Only",effect:"1% Block (Shield Only)",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Crystalline Sandpaper"},
-  {name:"Scint. Focus of the pontiff (2nd)",slot:"Secondary Only",effect:"85 Power from healing proc",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
-  {name:"Scint. Clemency of Pontiff (2nd)",slot:"Secondary Only",effect:"40 Heals",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Arcane Ornament",slot:"Secondary Only",effect:"25 arcane increase dmg",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint Elemental Ornament",slot:"Secondary Only",effect:"25 elemental increase",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scintillating Spiked Strut",slot:"Secondary Only",effect:"45 Piercing Dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint Glacial Ornament",slot:"Secondary or Ranged",effect:"45 Cold damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint Metaphysical Ornament",slot:"Secondary or Ranged",effect:"2 power regen",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint Molten Ornament",slot:"Secondary or Ranged",effect:"45 Heat damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint. Nox. Ornament",slot:"Secondary or Ranged",effect:"25 Nox damage",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint. Runic Ornament",slot:"Secondary or Ranged",effect:"45 magic damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint. Spellbound Ornament",slot:"Secondary or Ranged",effect:"1 spell crit",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint Telekinetic Ornament",slot:"Secondary or Ranged",effect:"45 mental damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint. Viral Ornament",slot:"Secondary or Ranged",effect:"45 disease dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint. Serpentine Ornament",slot:"Secondary or Ranged",effect:"45 poison dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Acrylia Paper"},
-  {name:"Scint. Brawny Straps",slot:"Shoulder",effect:"14 str",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scint. Gritty Strap",slot:"Shoulder",effect:"14 sta",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scint. Rugged Straps",slot:"Shoulder",effect:"100 HP",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
-  {name:"Scint. Fast Action buckle",slot:"Waist",effect:"1 ranged crit",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Spry Buckle",slot:"Waist",effect:"2 haste",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Oscillating Fastening",slot:"Wrist",effect:"Heal Reactive (Parry)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Reactive Fastening",slot:"Wrist",effect:"Heal Reactive (Riposte)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Diverting Fastening",slot:"Wrist",effect:"Heal Reactive (Deflect)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Brawny Fastening",slot:"Wrist",effect:"14 Str",crafter:"Nuggies",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Rosewood Kindling"},
-  {name:"Scint. Balanced Fastening",slot:"Wrist",effect:"2% Parry",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mystical Incense"},
-  {name:"Scint Intellectual Fastening",slot:"Wrist",effect:"14 Int",crafter:"Magis",hasBook:true,fragment:"9 Lunar",powder:"1 Illusionary",fuel:"7 Mythical Filament"},
+  {name:"Luminous Robust Applique",slot:"Chest",effect:"1 power regen",crafter:"Soprana aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby Fragment",powder:"4 Spectral Powder",fuel:"5 Beeswax Candle"},
+  {name:"Scint Prismatic Applique",slot:"Chest",effect:"6 to all stats",crafter:"Dillbert aka Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 flamewrought candles"},
+  {name:"Scint Metaphysical Lining",slot:"Cloak",effect:"3 Power Regen",crafter:"Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Rosewood Kindling"},
+  {name:"Scint Intellectual Backing",slot:"Ear",effect:"14 Int",crafter:"Crunchabunch",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Agile Spurs",slot:"Feet",effect:"14 Agi",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Gritty Spurs",slot:"Feet",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Glancing Splint",slot:"Forearm",effect:"7 Parry",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Reinforced Splint",slot:"Forearm",effect:"67 phys mit",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Savvy Splint",slot:"Forearm",effect:"14 Wis",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Lambent Fast Action Stitching",slot:"Hands",effect:"1 Ranged crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Strand Filament"},
+  {name:"Scint Agile Stitching",slot:"Hands",effect:"14 agi",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint Occult Stitching",slot:"Hands",effect:"25 Spell damage",crafter:"Magis",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Restorative Stitching",slot:"Hands",effect:"40 Increase healing",crafter:"Magis",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Lambent Blessed Imprint",slot:"Head",effect:"1 Heal crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Strand Filament"},
+  {name:"Scint. Epiphanic imprint",slot:"Head",effect:"100 power",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint Brawny Brace",slot:"Legs",effect:"14 Str",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Gritty Brace",slot:"Legs",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Occult Clasp",slot:"Neck",effect:"25 increase spell damage",crafter:"UNAVAILABLE",hasBook:false,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Judicious Clasp",slot:"Neck",effect:"10 DPS",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Restorative Clasp",slot:"Neck",effect:"40 increase to heals",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Spry Clasp",slot:"Neck",effect:"2 Haste",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Tactical Clasp",slot:"Neck",effect:"1 Melee Crit",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Focus of the pontiff",slot:"Primary",effect:"85 Power from healing proc",weaponType:"Any Primary",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 flamewrought candles"},
+  {name:"Lambent Magi's Second Sight",slot:"Primary",effect:"1 Spell Crit",weaponType:"Any Weapon",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Strand Filament"},
+  {name:"Scint. Clemency of Pontiff",slot:"Primary",effect:"40 Heals",weaponType:"Any Primary",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Pontiff Second Sight",slot:"Primary",effect:"1 Crit heal or ward",weaponType:"Any Primary",crafter:"Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Focus of Magi",slot:"Primary",effect:"85 Power proc",weaponType:"Any Primary",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mystical Incense"},
+  {name:"Scint. Balancing Ayr Stone",slot:"Primary",effect:"2.0% Riposte",weaponType:"One-Handed Slashing",crafter:"Ansel",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Deft Pommel",slot:"Primary",effect:"AE Autoattack 2H",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Proficient Shaft",slot:"Primary",effect:"3 Multiattack",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Judicious Easyloader",slot:"Thrown Only",effect:"10 DPS (Thrown)",crafter:"Magis",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scintillating Judicious Composite Gear",slot:"Ranged Only",effect:"10 DPS (Ranged/Bow)",crafter:"BigP",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Lambent Rugged Polish",slot:"Ring",effect:"70 Health",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl Fragment",powder:"1 Vision Powder",fuel:"6 Bayberry Candles"},
+  {name:"Lambent Epiphanic Polish",slot:"Ring",effect:"70 Power",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl Fragment",powder:"1 Vision Powder",fuel:"6 Bayberry Candles"},
+  {name:"Luminous Blessed Strut",slot:"Secondary Only",effect:"1% Heal Crit",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby Fragment",powder:"4 Spectral Powder",fuel:"5 Diamond Sandpaper"},
+  {name:"Lambent Balanced Strut",slot:"Secondary Only",effect:"1% Block (Shield Only)",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Crystalline Sandpaper"},
+  {name:"Scint. Focus of the pontiff (2nd)",slot:"Secondary Only",effect:"85 Power from healing proc",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 flamewrought candles"},
+  {name:"Scint. Clemency of Pontiff (2nd)",slot:"Secondary Only",effect:"40 Heals",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Arcane Ornament",slot:"Secondary Only",effect:"25 arcane increase dmg",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Elemental Ornament",slot:"Secondary Only",effect:"25 elemental increase",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scintillating Spiked Strut",slot:"Secondary Only",effect:"45 Piercing Dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Glacial Ornament",slot:"Secondary or Ranged",effect:"45 Cold damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Metaphysical Ornament",slot:"Secondary or Ranged",effect:"2 power regen",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Molten Ornament",slot:"Secondary or Ranged",effect:"45 Heat damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Nox. Ornament",slot:"Secondary or Ranged",effect:"25 Nox damage",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Runic Ornament",slot:"Secondary or Ranged",effect:"45 magic damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Spellbound Ornament",slot:"Secondary or Ranged",effect:"1 spell crit",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Telekinetic Ornament",slot:"Secondary or Ranged",effect:"45 mental damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Viral Ornament",slot:"Secondary or Ranged",effect:"45 disease dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Serpentine Ornament",slot:"Secondary or Ranged",effect:"45 poison dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Brawny Straps",slot:"Shoulder",effect:"14 str",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Gritty Strap",slot:"Shoulder",effect:"14 sta",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Rugged Straps",slot:"Shoulder",effect:"100 HP",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Fast Action buckle",slot:"Waist",effect:"1 ranged crit",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Spry Buckle",slot:"Waist",effect:"2 haste",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Oscillating Fastening",slot:"Wrist",effect:"Heal Reactive (Parry)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Reactive Fastening",slot:"Wrist",effect:"Heal Reactive (Riposte)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Diverting Fastening",slot:"Wrist",effect:"Heal Reactive (Deflect)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Brawny Fastening",slot:"Wrist",effect:"14 Str",crafter:"Nuggies",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Balanced Fastening",slot:"Wrist",effect:"2% Parry",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mystical Incense"},
+  {name:"Scint Intellectual Fastening",slot:"Wrist",effect:"14 Int",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
 ];
 
 const quantities = {};
@@ -239,14 +259,17 @@ function addMat(totals, str, mult) {
   totals[key].qty += mat.qty * mult;
 }
 function buildSummary() {
-  const byCrafter = {}, matTotals = {};
+  const byCrafter = {}, matTotals = {}, matByCrafter = {};
   Object.entries(quantities).filter(([,v]) => v > 0).forEach(([idx, qty]) => {
     const r = recipes[idx];
-    if (!byCrafter[r.crafter]) byCrafter[r.crafter] = [];
+    if (!byCrafter[r.crafter]) { byCrafter[r.crafter] = []; matByCrafter[r.crafter] = {}; }
     byCrafter[r.crafter].push({name: r.name, qty, weaponType: r.weaponType||null});
-    ['mana','infusion','fragment','powder','fuel'].forEach(k => addMat(matTotals, r[k], qty));
+    ['mana','infusion','fragment','powder','fuel'].forEach(k => {
+      addMat(matTotals, r[k], qty);
+      addMat(matByCrafter[r.crafter], r[k], qty);
+    });
   });
-  return {byCrafter, matTotals};
+  return {byCrafter, matTotals, matByCrafter};
 }
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
@@ -324,14 +347,18 @@ function updatePreview() {
   const hasItems = Object.values(quantities).some(v => v > 0);
   document.getElementById('previewSection').style.display = hasItems ? 'block' : 'none';
   if (!hasItems) return;
-  const {byCrafter, matTotals} = buildSummary();
+  const {byCrafter, matTotals, matByCrafter} = buildSummary();
   const co = document.getElementById('crafterOutput');
   co.innerHTML = '';
   Object.entries(byCrafter).sort().forEach(([cr, items]) => {
+    const crafterMats = matByCrafter[cr];
     const sec = document.createElement('div');
     sec.className = 'crafter-section';
     sec.innerHTML = `<h3>✉️ ${cr}</h3>` +
-      items.map(i => `<div class="crafter-item"><span class="item-name">${i.name}</span><span class="qty-badge">x${i.qty}</span></div>`).join('');
+      items.map(i => `<div class="crafter-item"><span class="item-name">${i.name}${i.weaponType ? ` <span style="color:#c9a227;font-size:0.9em">(${i.weaponType})</span>` : ''}</span><span class="qty-badge">x${i.qty}</span></div>`).join('') +
+      `<div class="crafter-mats-label">Materials for ${cr.split(' ')[0]}:</div>` +
+      Object.values(crafterMats).sort((a,b)=>a.name.localeCompare(b.name))
+        .map(m=>`<div class="crafter-mat-row"><span>${m.name}</span><span class="mat-qty-sm">×${m.qty}</span></div>`).join('');
     co.appendChild(sec);
   });
   document.getElementById('materialsOutput').innerHTML = Object.values(matTotals)
@@ -339,19 +366,29 @@ function updatePreview() {
     .map(m=>`<div class="mat-row"><span class="mat-name">${m.name}</span><span class="mat-qty">×${m.qty}</span></div>`).join('');
 }
 
-// ── Shared storage ──
+// ── Firebase order functions ──
+function listenToOrders() {
+  const q = query(collection(db, 'orders'), orderBy('timestamp', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    orders = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+    renderBoard();
+    updatePendingBadge();
+  }, (err) => {
+    console.error('Firestore error:', err);
+    showToast('Could not connect to order database.', 'error');
+  });
+}
+
 async function loadOrders(showFeedback=false) {
   try {
-    const result = await window.storage.get('bl_orders', true);
-    orders = result ? JSON.parse(result.value) : [];
+    const snapshot = await getDocs(query(collection(db, 'orders'), orderBy('timestamp', 'desc')));
+    orders = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
   } catch(e) { orders = []; }
   renderBoard();
   updatePendingBadge();
   if (showFeedback) showToast('Orders refreshed!');
 }
-async function saveOrders() {
-  try { await window.storage.set('bl_orders', JSON.stringify(orders), true); } catch(e){}
-}
+
 function updatePendingBadge() {
   const n = orders.filter(o=>o.status==='pending').length;
   document.getElementById('pendingBadge').textContent = n > 0 ? ` (${n})` : '';
@@ -368,20 +405,27 @@ async function submitOrder() {
   btn.innerHTML = '<span class="spinner"></span>Submitting...';
 
   const {byCrafter, matTotals} = buildSummary();
-  const orderId = Date.now().toString();
 
   // Discord message
   let msg = `## 📦 New Adornment Order — **${name}**\n`;
   Object.entries(byCrafter).sort().forEach(([cr, items]) => {
     msg += `\n**✉️ ${cr}:**\n`;
-    items.forEach(i => msg += `> • ${i.name} ×${i.qty}\n`);
+    items.forEach(i => msg += `> • ${i.name}${i.weaponType ? ` (${i.weaponType})` : ''} ×${i.qty}\n`);
   });
   msg += `\n**📦 Materials needed:**\n`;
   Object.values(matTotals).sort((a,b)=>a.name.localeCompare(b.name))
     .forEach(m => msg += `> • ${m.name}: ×${m.qty}\n`);
-  msg += `\n*Use the Order Board to mark complete when done. Order ID: ${orderId}*`;
+  msg += `\n*Use the Order Board to mark complete when done.*`;
 
   try {
+    await addDoc(collection(db, 'orders'), {
+      player: name,
+      timestamp: Date.now(),
+      status: 'pending',
+      byCrafter,
+      matTotals
+    });
+
     const res = await fetch(WEBHOOK, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -389,18 +433,12 @@ async function submitOrder() {
     });
     if (!res.ok && res.status !== 204) throw new Error(`Discord HTTP ${res.status}`);
 
-    // Save to shared order board
-    await loadOrders();
-    orders.unshift({id: orderId, player: name, timestamp: Date.now(), status: 'pending', byCrafter, matTotals});
-    await saveOrders();
-    updatePendingBadge();
-
     clearAll();
     showToast(`✅ Order posted to #crafting!`);
     switchTab('board');
   } catch(e) {
     console.error(e);
-    showToast('Could not post to Discord. Check connection.','error');
+    showToast('Could not submit order. Check connection.','error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '📨 Submit Order to Discord';
@@ -454,26 +492,39 @@ function renderBoard() {
 async function markComplete(id) {
   const o = orders.find(o=>o.id===id);
   if (!o) return;
-  o.status = 'completed';
-  await saveOrders();
-  renderBoard(); updatePendingBadge();
-  // Notify Discord
-  fetch(WEBHOOK, {method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({content:`✅ **${o.player}'s** adornment order has been marked **complete**!`, username:'Blacklist Adorns'})
-  }).catch(()=>{});
-  showToast(`${o.player}'s order marked complete!`);
+  try {
+    await updateDoc(doc(db, 'orders', id), {status: 'completed'});
+    fetch(WEBHOOK, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({content:`✅ **${o.player}'s** adornment order has been marked **complete**!`, username:'Blacklist Adorns'})
+    }).catch(()=>{});
+    showToast(`${o.player}'s order marked complete!`);
+  } catch(e) { showToast('Failed to update order.','error'); }
 }
+
 async function deleteOrder(id) {
   if (!confirm('Delete this order?')) return;
-  orders = orders.filter(o=>o.id!==id);
-  await saveOrders(); renderBoard(); updatePendingBadge();
-  showToast('Order deleted.');
+  try {
+    await deleteDoc(doc(db, 'orders', id));
+    showToast('Order deleted.');
+  } catch(e) { showToast('Failed to delete order.','error'); }
 }
 
 // Init
 try { const n=localStorage.getItem('bl_name'); if(n) document.getElementById('playerName').value=n; } catch(e){}
 renderItems(recipes);
-loadOrders();
+listenToOrders();
+
+// Expose functions needed by inline HTML onclick handlers
+window.switchTab = switchTab;
+window.filterItems = filterItems;
+window.changeQty = changeQty;
+window.clearAll = clearAll;
+window.submitOrder = submitOrder;
+window.renderBoard = renderBoard;
+window.loadOrders = loadOrders;
+window.markComplete = markComplete;
+window.deleteOrder = deleteOrder;
+window.saveName = saveName;
 </script>
 </body>
 </html>
