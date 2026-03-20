@@ -1,24 +1,968 @@
-export default {
-  async fetch(request) {
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        }
-      });
-    }
-    if (request.method !== 'POST') {
-      return new Response('Not allowed', { status: 405 });
-    }
-    const WEBHOOK = 'https://discord.com/api/webhooks/1484334832778481744/mSHuA6wyFA16LS3IDHWT8DrjYnXfaJHA8uBj0o-bHdhuAjv-BML4HNPTAj1DKTZ8zeM0';
-    const body = await request.json();
-    await fetch(WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blacklist Adornment Orders</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
+
+  /* ── PASSWORD SCREEN ── */
+  #passwordScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden;
   }
+  #passwordScreen.unlocking { animation: screenUnlock 1.2s forwards; }
+  @keyframes screenUnlock {
+    0% { opacity: 1; transform: scale(1); }
+    60% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0; transform: scale(1.15); pointer-events: none; }
+  }
+
+  /* Animated background particles */
+  .pw-bg { position: absolute; inset: 0; overflow: hidden; }
+  .ember {
+    position: absolute; bottom: -20px; border-radius: 50%;
+    background: radial-gradient(circle, #9b59b6, #4a0080);
+    animation: floatEmber linear infinite;
+    opacity: 0;
+  }
+  @keyframes floatEmber {
+    0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+    10% { opacity: 0.7; }
+    90% { opacity: 0.3; }
+    100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.3); opacity: 0; }
+  }
+
+  /* Dragon SVG container */
+  .dragon-wrap { display: none; }
+
+  /* Title */
+  .pw-title {
+    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+    font-size: 3em; font-weight: bold; letter-spacing: 6px; text-transform: uppercase;
+    background: linear-gradient(135deg, #ffffff 0%, #c9a227 40%, #ffffff 60%, #9b59b6 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    text-shadow: none;
+    margin-bottom: 6px;
+    animation: titleShimmer 3s ease-in-out infinite;
+  }
+  @keyframes titleShimmer {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.3) drop-shadow(0 0 20px #c9a227); }
+  }
+  .pw-subtitle {
+    color: #9b59b6; font-size: 0.85em; letter-spacing: 4px; text-transform: uppercase;
+    margin-bottom: 40px; opacity: 0.8;
+  }
+
+  /* Input box */
+  .pw-box {
+    background: rgba(10, 0, 20, 0.85);
+    border: 1px solid #6600cc;
+    border-radius: 12px; padding: 32px 40px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    box-shadow: 0 0 40px #33006688, inset 0 0 20px #1a003322;
+    min-width: 340px;
+    position: relative; z-index: 2;
+  }
+  .pw-box::before {
+    content: ''; position: absolute; inset: -1px; border-radius: 12px;
+    background: linear-gradient(135deg, #6600cc44, transparent, #9b59b644);
+    pointer-events: none;
+  }
+  .pw-label { color: #c9a227; font-size: 0.8em; letter-spacing: 3px; text-transform: uppercase; }
+  .pw-input {
+    background: rgba(0,0,0,0.6); border: 1px solid #440088;
+    color: #e0e0e0; font-size: 1.1em; padding: 12px 18px; border-radius: 8px;
+    width: 100%; outline: none; text-align: center; letter-spacing: 4px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .pw-input:focus { border-color: #9b59b6; box-shadow: 0 0 20px #6600cc66; }
+  .pw-input.shake { animation: shake 0.5s; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-8px)} 80%{transform:translateX(8px)}
+  }
+  .pw-btn {
+    background: linear-gradient(135deg, #330066, #6600cc);
+    color: #e0e0e0; border: 1px solid #9b59b6; padding: 12px 36px;
+    border-radius: 8px; font-size: 1em; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; width: 100%; transition: all 0.3s;
+    font-family: 'Palatino Linotype', serif;
+  }
+  .pw-btn:hover { background: linear-gradient(135deg, #4a0099, #8800ff); box-shadow: 0 0 20px #6600cc; transform: translateY(-2px); }
+  .pw-error { color: #e94560; font-size: 0.8em; letter-spacing: 1px; min-height: 18px; transition: opacity 0.3s; }
+  .pw-divider {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, #6600cc, #c9a227, #6600cc, transparent);
+    margin: 4px 0;
+  }
+  /* ── END PASSWORD SCREEN ── */
+  header { background: linear-gradient(135deg, #16213e, #0f3460); padding: 18px 30px; border-bottom: 2px solid #e94560; }
+  header h1 { color: #e94560; font-size: 1.5em; }
+  header p { color: #a0a0c0; font-size: 0.82em; margin-top: 3px; }
+  .tab-bar { display: flex; background: #16213e; border-bottom: 2px solid #0f3460; }
+  .tab { padding: 12px 24px; cursor: pointer; color: #888; font-size: 0.9em; border-bottom: 3px solid transparent; transition: all 0.2s; user-select: none; }
+  .tab:hover { color: #e0e0e0; }
+  .tab.active { color: #e94560; border-bottom-color: #e94560; font-weight: bold; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .name-bar { background: #16213e; border: 1px solid #e94560; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+  .name-bar label { color: #c9a227; font-size: 0.9em; white-space: nowrap; }
+  .name-bar input { background: transparent; border: none; border-bottom: 1px solid #444; color: #e0e0e0; font-size: 1em; flex: 1; outline: none; padding: 2px 4px; }
+  .name-bar input::placeholder { color: #555; }
+  .search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-bar input, .search-bar select { background: #16213e; border: 1px solid #0f3460; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-size: 0.88em; flex: 1; min-width: 140px; }
+  .search-bar input::placeholder { color: #555; }
+  .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .item-card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 12px 70px 12px 14px; transition: border-color 0.2s; position: relative; }
+  .item-card:hover { border-color: #3a5080; }
+  .item-card.selected { border-color: #e94560; background: #1f2a4a; }
+  .item-card h3 { color: #c9a227; font-size: 0.87em; margin-bottom: 4px; line-height: 1.3; }
+  .item-card .slot { color: #7eb8f7; font-size: 0.72em; text-transform: uppercase; letter-spacing: 1px; }
+  .item-card .effect { color: #90ee90; font-size: 0.78em; margin: 3px 0; }
+  .item-card .crafter { color: #ff9a7b; font-size: 0.73em; }
+  .item-card .no-book { color: #ff6b6b; font-size: 0.7em; font-style: italic; }
+  .item-card .weapon-type { color: #c9a227; font-size: 0.72em; margin: 2px 0; background: #c9a22718; border: 1px solid #c9a22740; border-radius: 4px; padding: 1px 5px; display: inline-block; }
+  .item-card .weapon-tbd { color: #888; border-color: #44444488; background: #44444418; }
+  .qty-control { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 4px; }
+  .qty-control button { background: #0f3460; border: 1px solid #e94560; color: #e94560; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 1em; line-height: 1; }
+  .qty-control button:hover { background: #e94560; color: white; }
+  .qty-display { background: #e94560; color: white; width: 28px; height: 22px; border-radius: 4px; text-align: center; line-height: 22px; font-size: 0.85em; font-weight: bold; }
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 680px) { .preview-grid { grid-template-columns: 1fr; } }
+  .result-box { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 14px; }
+  .result-box h2 { color: #c9a227; font-size: 0.95em; margin-bottom: 10px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
+  .crafter-section { margin-bottom: 12px; }
+  .crafter-section h3 { color: #ff9a7b; font-size: 0.87em; margin-bottom: 5px; }
+  .crafter-mats-label { color: #7eb8f7; font-size: 0.75em; margin: 6px 0 3px; font-style: italic; }
+  .crafter-mat-row { display: flex; justify-content: space-between; padding: 2px 0 2px 8px; font-size: 0.77em; color: #a0b8c8; border-bottom: 1px solid #1a2a3a; }
+  .mat-qty-sm { color: #90ee90; font-weight: bold; }
+  .crafter-item { font-size: 0.8em; padding: 3px 0; border-bottom: 1px solid #1a2a4a; display: flex; justify-content: space-between; }
+  .crafter-item .item-name { color: #c9d6df; }
+  .qty-badge { background: #e94560; color: white; padding: 1px 6px; border-radius: 10px; font-size: 0.73em; flex-shrink: 0; }
+  .mat-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1a2a4a; font-size: 0.8em; }
+  .mat-row .mat-name { color: #c9d6df; }
+  .mat-row .mat-qty { color: #90ee90; font-weight: bold; }
+  .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.88em; font-weight: bold; transition: all 0.2s; }
+  .btn-primary { background: #e94560; color: white; width: 100%; margin-bottom: 8px; font-size: 0.95em; padding: 12px; }
+  .btn-primary:hover { background: #c73652; }
+  .btn-primary:disabled { background: #555; cursor: not-allowed; }
+  .btn-secondary { background: #0f3460; color: #7eb8f7; border: 1px solid #0f3460; }
+  .btn-secondary:hover { border-color: #7eb8f7; }
+  .btn-sm-danger { background: transparent; color: #e94560; border: 1px solid #e94560; font-size: 0.75em; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .btn-sm-danger:hover { background: #e94560; color: white; }
+  .btn-sm-complete { background: transparent; color: #90ee90; border: 1px solid #90ee90; font-size: 0.75em; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .btn-sm-complete:hover { background: #27ae60; color: white; border-color: #27ae60; }
+  .order-board { display: flex; flex-direction: column; gap: 14px; }
+  .order-card { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 16px; }
+  .order-card.completed { opacity: 0.5; border-color: #27ae60; }
+  .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 6px; }
+  .order-who { font-size: 1em; color: #c9a227; font-weight: bold; }
+  .order-time { font-size: 0.75em; color: #666; margin-top: 2px; }
+  .order-status { font-size: 0.75em; padding: 3px 10px; border-radius: 10px; }
+  .status-pending { background: #e9456022; color: #e94560; border: 1px solid #e94560; }
+  .status-done { background: #27ae6022; color: #90ee90; border: 1px solid #90ee90; }
+  .order-crafter-block { margin-bottom: 10px; }
+  .order-crafter-label { color: #ff9a7b; font-size: 0.82em; font-weight: bold; margin-bottom: 4px; }
+  .order-item-line { font-size: 0.8em; color: #c9d6df; padding: 2px 0 2px 10px; display: flex; align-items: center; gap: 6px; }
+  .order-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-bar select { background: #16213e; border: 1px solid #0f3460; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 0.85em; }
+  .filter-bar label { color: #888; font-size: 0.85em; }
+  .board-count { color: #888; font-size: 0.82em; margin-left: auto; }
+  .empty-state { text-align: center; color: #444; padding: 24px; font-size: 0.88em; grid-column: 1/-1; }
+  .empty-board { text-align: center; color: #444; padding: 50px 20px; font-size: 0.9em; line-height: 1.8; }
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px; border-radius: 6px; font-size: 0.85em; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; max-width: 300px; }
+  .toast.success { background: #27ae60; color: white; }
+  .toast.error { background: #e94560; color: white; }
+  .toast.show { opacity: 1; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ffffff44; border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .note { color: #666; font-size: 0.78em; margin-top: 6px; text-align: center; }
+  .divider { border: none; border-top: 1px solid #0f3460; margin: 18px 0; }
+  .orders-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 700px) { .orders-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PASSWORD SCREEN
+═══════════════════════════════════════════ -->
+<div id="passwordScreen">
+  <div class="pw-bg" id="pwBg"></div>
+
+  <div class="dragon-wrap" style="display:none">
+    <svg width="380" height="440" viewBox="0 0 380 440" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bodyGrad" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#1e0035"/>
+          <stop offset="60%" stop-color="#0a0018"/>
+          <stop offset="100%" stop-color="#020005"/>
+        </radialGradient>
+        <radialGradient id="scaleGrad" cx="50%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#2a0045"/>
+          <stop offset="100%" stop-color="#06000e"/>
+        </radialGradient>
+        <radialGradient id="eyeGrad" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="20%" stop-color="#ee88ff"/>
+          <stop offset="55%" stop-color="#bb00ff"/>
+          <stop offset="100%" stop-color="#550077"/>
+        </radialGradient>
+        <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#dd00ff" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#440066" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="breathGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#cc44ff" stop-opacity="1"/>
+          <stop offset="60%" stop-color="#7700bb" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#330055" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="neckGrad" cx="50%" cy="0%" r="100%">
+          <stop offset="0%" stop-color="#1a0030"/>
+          <stop offset="100%" stop-color="#050010"/>
+        </radialGradient>
+        <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="eyeFilter" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="7" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="hardGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- ═══ COILED BODY / BASE ═══ -->
+      <!-- Lower coil visible at bottom -->
+      <path d="M80 420 Q130 395 190 390 Q250 395 300 420 Q330 435 310 440 Q250 425 190 422 Q130 425 70 440 Q50 435 80 420Z"
+            fill="url(#bodyGrad)" stroke="#2d0050" stroke-width="1.5"/>
+      <!-- Coil scales -->
+      <path d="M100 415 Q130 407 160 412 Q190 417 220 412 Q250 407 280 415" stroke="#440077" stroke-width="1.2" fill="none" opacity="0.7"/>
+      <path d="M110 425 Q140 417 170 422 Q200 427 230 422 Q260 417 290 425" stroke="#440077" stroke-width="1" fill="none" opacity="0.5"/>
+
+      <!-- Body mass rising up -->
+      <path d="M110 430 Q95 390 100 340 Q105 300 120 270 Q135 240 155 225 Q170 215 190 212 Q210 215 225 225 Q245 240 260 270 Q275 300 280 340 Q285 390 270 430Z"
+            fill="url(#bodyGrad)" stroke="#2d0050" stroke-width="1.5"/>
+
+      <!-- Body armored scale plates - left side -->
+      <path d="M118 380 Q108 365 112 348 Q118 358 122 372Z" fill="#1a002e" stroke="#550088" stroke-width="1"/>
+      <path d="M112 348 Q104 332 108 316 Q115 326 118 340Z" fill="#1a002e" stroke="#550088" stroke-width="1"/>
+      <path d="M110 316 Q103 300 107 285 Q114 295 116 308Z" fill="#1a002e" stroke="#550088" stroke-width="1"/>
+      <!-- Body armored scale plates - right side -->
+      <path d="M262 380 Q272 365 268 348 Q262 358 258 372Z" fill="#1a002e" stroke="#550088" stroke-width="1"/>
+      <path d="M268 348 Q276 332 272 316 Q265 326 262 340Z" fill="#1a002e" stroke="#550088" stroke-width="1"/>
+      <path d="M270 316 Q277 300 273 285 Q266 295 264 308Z" fill="#1a002e" stroke="#550088" stroke-width="1"/>
+
+      <!-- Underbelly plates -->
+      <path d="M155 430 Q173 415 190 418 Q207 415 225 430" fill="#0e001c" stroke="#330055" stroke-width="1" opacity="0.9"/>
+      <ellipse cx="190" cy="350" rx="30" ry="55" fill="#0c0018" stroke="#2a0042" stroke-width="1" opacity="0.8"/>
+      <!-- Belly scale segments -->
+      <path d="M163 310 Q176 304 190 307 Q204 304 217 310" stroke="#3d0060" stroke-width="1.2" fill="none"/>
+      <path d="M160 328 Q174 322 190 325 Q206 322 220 328" stroke="#3d0060" stroke-width="1.2" fill="none"/>
+      <path d="M158 346 Q173 340 190 343 Q207 340 222 346" stroke="#3d0060" stroke-width="1.2" fill="none"/>
+      <path d="M157 364 Q173 358 190 361 Q207 358 223 364" stroke="#3d0060" stroke-width="1.2" fill="none"/>
+      <path d="M158 382 Q174 376 190 379 Q206 376 222 382" stroke="#3d0060" stroke-width="1.2" fill="none"/>
+      <path d="M160 400 Q175 394 190 397 Q205 394 220 400" stroke="#3d0060" stroke-width="1" fill="none"/>
+
+      <!-- ═══ FORELEGS / CLAWS ═══ -->
+      <!-- Left foreleg -->
+      <path d="M125 295 Q100 310 85 330 Q75 348 80 358 Q90 352 95 338 Q103 320 118 308Z"
+            fill="url(#bodyGrad)" stroke="#2d0050" stroke-width="1.5"/>
+      <!-- Left foreleg scales -->
+      <path d="M95 345 Q102 332 110 325" stroke="#440077" stroke-width="1" fill="none" opacity="0.6"/>
+      <path d="M88 355 Q96 343 104 336" stroke="#440077" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- Left claws -->
+      <path d="M80 358 Q68 368 64 362 Q70 354 80 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+      <path d="M80 358 Q72 372 66 368 Q70 360 80 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+      <path d="M80 358 Q76 374 70 372 Q73 362 80 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+      <path d="M80 358 Q82 375 76 374 Q77 364 80 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+
+      <!-- Right foreleg -->
+      <path d="M255 295 Q280 310 295 330 Q305 348 300 358 Q290 352 285 338 Q277 320 262 308Z"
+            fill="url(#bodyGrad)" stroke="#2d0050" stroke-width="1.5"/>
+      <!-- Right foreleg scales -->
+      <path d="M285 345 Q278 332 270 325" stroke="#440077" stroke-width="1" fill="none" opacity="0.6"/>
+      <path d="M292 355 Q284 343 276 336" stroke="#440077" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- Right claws -->
+      <path d="M300 358 Q312 368 316 362 Q310 354 300 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+      <path d="M300 358 Q308 372 314 368 Q310 360 300 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+      <path d="M300 358 Q304 374 310 372 Q307 362 300 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+      <path d="M300 358 Q298 375 304 374 Q303 364 300 358Z" fill="#0d0018" stroke="#9933cc" stroke-width="1.2"/>
+
+      <!-- ═══ NECK - thick, coiled, powerful ═══ -->
+      <!-- Neck base wide -->
+      <path d="M148 228 Q140 200 138 170 Q136 145 142 125 Q155 135 158 158 Q160 180 162 205 Q164 218 165 228Z"
+            fill="url(#neckGrad)" stroke="#2d0050" stroke-width="1.5"/>
+      <path d="M232 228 Q240 200 242 170 Q244 145 238 125 Q225 135 222 158 Q220 180 218 205 Q216 218 215 228Z"
+            fill="url(#neckGrad)" stroke="#2d0050" stroke-width="1.5"/>
+      <!-- Neck center fill -->
+      <path d="M162 228 Q163 195 163 165 Q163 138 168 120 Q180 112 190 110 Q200 112 212 120 Q217 138 217 165 Q217 195 218 228Z"
+            fill="url(#neckGrad)" stroke="#2d0050" stroke-width="1"/>
+      <!-- Neck scale plates left -->
+      <path d="M143 215 Q136 200 139 186 Q147 196 148 208Z" fill="#160028" stroke="#550088" stroke-width="1" opacity="0.9"/>
+      <path d="M140 186 Q134 172 137 158 Q145 168 146 180Z" fill="#160028" stroke="#550088" stroke-width="1" opacity="0.9"/>
+      <path d="M138 158 Q133 144 136 132 Q144 140 144 152Z" fill="#160028" stroke="#550088" stroke-width="1" opacity="0.9"/>
+      <!-- Neck scale plates right -->
+      <path d="M237 215 Q244 200 241 186 Q233 196 232 208Z" fill="#160028" stroke="#550088" stroke-width="1" opacity="0.9"/>
+      <path d="M240 186 Q246 172 243 158 Q235 168 234 180Z" fill="#160028" stroke="#550088" stroke-width="1" opacity="0.9"/>
+      <path d="M242 158 Q247 144 244 132 Q236 140 236 152Z" fill="#160028" stroke="#550088" stroke-width="1" opacity="0.9"/>
+      <!-- Neck spine ridge -->
+      <path d="M190 228 Q190 195 190 162 Q190 138 190 118" stroke="#7700aa" stroke-width="2" fill="none" opacity="0.4"/>
+      <path d="M184 218 L179 205 L185 215Z" fill="#220038" stroke="#8800bb" stroke-width="1"/>
+      <path d="M184 200 L178 187 L185 197Z" fill="#220038" stroke="#8800bb" stroke-width="1"/>
+      <path d="M184 182 L178 169 L185 179Z" fill="#220038" stroke="#8800bb" stroke-width="1"/>
+      <path d="M184 164 L179 152 L185 162Z" fill="#220038" stroke="#8800bb" stroke-width="1"/>
+      <path d="M184 148 L180 137 L185 146Z" fill="#220038" stroke="#8800bb" stroke-width="1"/>
+
+      <!-- ═══ HEAD - front-facing, slightly tilted ═══ -->
+      <!-- Skull top -->
+      <path d="M138 110 Q136 80 148 60 Q160 42 190 36 Q220 42 232 60 Q244 80 242 110 Q240 130 222 142 Q206 150 190 152 Q174 150 158 142 Q140 130 138 110Z"
+            fill="url(#bodyGrad)" stroke="#2d0050" stroke-width="2"/>
+
+      <!-- Cheek scales left -->
+      <path d="M140 108 Q132 95 136 82 Q144 92 146 103Z" fill="#180028" stroke="#550088" stroke-width="1"/>
+      <path d="M138 82 Q131 70 136 60 Q144 69 145 78Z" fill="#180028" stroke="#550088" stroke-width="1"/>
+      <!-- Cheek scales right -->
+      <path d="M240 108 Q248 95 244 82 Q236 92 234 103Z" fill="#180028" stroke="#550088" stroke-width="1"/>
+      <path d="M242 82 Q249 70 244 60 Q236 69 235 78Z" fill="#180028" stroke="#550088" stroke-width="1"/>
+
+      <!-- Snout / muzzle - forward-facing elongated -->
+      <path d="M158 140 Q152 155 150 170 Q150 182 158 188 Q173 196 190 198 Q207 196 222 188 Q230 182 230 170 Q228 155 222 140Z"
+            fill="url(#bodyGrad)" stroke="#2d0050" stroke-width="1.8"/>
+      <!-- Snout bridge ridge -->
+      <path d="M175 138 Q183 132 190 130 Q197 132 205 138" stroke="#550088" stroke-width="2" fill="none"/>
+      <path d="M172 148 Q181 143 190 141 Q199 143 208 148" stroke="#440077" stroke-width="1.5" fill="none" opacity="0.7"/>
+
+      <!-- Nostrils -->
+      <ellipse cx="172" cy="165" rx="5" ry="4" fill="#0d0018" stroke="#7700aa" stroke-width="1.2"/>
+      <circle cx="172" cy="165" r="2.5" fill="#550088" opacity="0.9"/>
+      <ellipse cx="208" cy="165" rx="5" ry="4" fill="#0d0018" stroke="#7700aa" stroke-width="1.2"/>
+      <circle cx="208" cy="165" r="2.5" fill="#550088" opacity="0.9"/>
+      <!-- Nostril glow -->
+      <ellipse cx="172" cy="165" rx="8" ry="6" fill="#9933cc" opacity="0.15" filter="url(#softGlow)"/>
+      <ellipse cx="208" cy="165" rx="8" ry="6" fill="#9933cc" opacity="0.15" filter="url(#softGlow)"/>
+
+      <!-- Lower jaw -->
+      <path d="M155 188 Q150 202 152 214 Q158 226 172 232 Q181 236 190 237 Q199 236 208 232 Q222 226 228 214 Q230 202 225 188Z"
+            fill="#0e001c" stroke="#2a0042" stroke-width="1.5"/>
+      <!-- Jaw scales -->
+      <path d="M160 200 Q175 195 190 197 Q205 195 220 200" stroke="#380058" stroke-width="1" fill="none" opacity="0.7"/>
+      <path d="M158 212 Q174 207 190 209 Q206 207 222 212" stroke="#380058" stroke-width="1" fill="none" opacity="0.6"/>
+
+      <!-- Upper teeth -->
+      <path d="M162 188 L158 200 L165 190Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M172 190 L169 203 L175 191Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M181 191 L179 205 L185 192Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M190 192 L189 206 L194 192Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M199 191 L198 205 L203 192Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M208 190 L207 203 L213 191Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M218 188 L218 200 L223 190Z" fill="#ccaaee" stroke="#aa88cc" stroke-width="0.5"/>
+      <!-- Lower teeth -->
+      <path d="M163 214 L160 202 L167 213Z" fill="#bbaadd" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M175 217 L173 205 L179 216Z" fill="#bbaadd" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M190 218 L189 206 L194 218Z" fill="#bbaadd" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M205 217 L204 205 L209 216Z" fill="#bbaadd" stroke="#aa88cc" stroke-width="0.5"/>
+      <path d="M217 214 L217 202 L222 213Z" fill="#bbaadd" stroke="#aa88cc" stroke-width="0.5"/>
+
+      <!-- Mouth glow / breath building -->
+      <ellipse cx="190" cy="210" rx="30" ry="12" fill="#9900cc" opacity="0.1" filter="url(#softGlow)"/>
+
+      <!-- ═══ BROW RIDGES ═══ -->
+      <path d="M138 100 Q152 88 168 86 Q155 98 145 108Z" fill="#120020" stroke="#660099" stroke-width="1.5"/>
+      <path d="M242 100 Q228 88 212 86 Q225 98 235 108Z" fill="#120020" stroke="#660099" stroke-width="1.5"/>
+
+      <!-- ═══ HORNS - crown of spines like the image ═══ -->
+      <!-- Center main horn -->
+      <path d="M185 36 Q182 12 188 0 Q193 12 195 36Z" fill="#0e0018" stroke="#9933cc" stroke-width="1.8"/>
+      <!-- Left main horn swept back -->
+      <path d="M168 44 Q152 22 156 8 Q164 20 170 40Z" fill="#0e0018" stroke="#8822bb" stroke-width="1.8"/>
+      <!-- Right main horn swept back -->
+      <path d="M212 44 Q228 22 224 8 Q216 20 210 40Z" fill="#0e0018" stroke="#8822bb" stroke-width="1.8"/>
+      <!-- Left secondary horn -->
+      <path d="M152 58 Q134 40 138 28 Q148 38 154 54Z" fill="#0e0018" stroke="#7711aa" stroke-width="1.5"/>
+      <!-- Right secondary horn -->
+      <path d="M228 58 Q246 40 242 28 Q232 38 226 54Z" fill="#0e0018" stroke="#7711aa" stroke-width="1.5"/>
+      <!-- Left outer horn -->
+      <path d="M142 78 Q120 62 126 50 Q138 60 144 74Z" fill="#0e0018" stroke="#660099" stroke-width="1.2"/>
+      <!-- Right outer horn -->
+      <path d="M238 78 Q260 62 254 50 Q242 60 236 74Z" fill="#0e0018" stroke="#660099" stroke-width="1.2"/>
+      <!-- Small frill spines left -->
+      <path d="M145 92 Q128 80 132 72 Q142 80 147 88Z" fill="#0e0018" stroke="#550088" stroke-width="1"/>
+      <path d="M140 105 Q122 96 126 88 Q136 95 141 102Z" fill="#0e0018" stroke="#550088" stroke-width="1"/>
+      <!-- Small frill spines right -->
+      <path d="M235 92 Q252 80 248 72 Q238 80 233 88Z" fill="#0e0018" stroke="#550088" stroke-width="1"/>
+      <path d="M240 105 Q258 96 254 88 Q244 95 239 102Z" fill="#0e0018" stroke="#550088" stroke-width="1"/>
+      <!-- Horn glow halos -->
+      <ellipse cx="188" cy="18" rx="5" ry="12" fill="#7700aa" opacity="0.2" filter="url(#softGlow)"/>
+      <ellipse cx="156" cy="28" rx="4" ry="10" fill="#6600aa" opacity="0.15" filter="url(#softGlow)"/>
+      <ellipse cx="224" cy="28" rx="4" ry="10" fill="#6600aa" opacity="0.15" filter="url(#softGlow)"/>
+
+      <!-- ═══ EYES - the crown jewels ═══ -->
+      <!-- Eye socket left -->
+      <ellipse cx="163" cy="100" rx="18" ry="15" fill="#06000f" stroke="#550088" stroke-width="2"/>
+      <!-- Eye socket right -->
+      <ellipse cx="217" cy="100" rx="18" ry="15" fill="#06000f" stroke="#550088" stroke-width="2"/>
+      <!-- Outer glow halos -->
+      <ellipse cx="163" cy="100" rx="26" ry="22" fill="url(#eyeGlow)" opacity="0.6"/>
+      <ellipse cx="217" cy="100" rx="26" ry="22" fill="url(#eyeGlow)" opacity="0.6"/>
+      <!-- Iris left -->
+      <ellipse class="dragon-eye-left" cx="163" cy="100" rx="14" ry="12" fill="url(#eyeGrad)" filter="url(#eyeFilter)"/>
+      <!-- Iris right -->
+      <ellipse class="dragon-eye-right" cx="217" cy="100" rx="14" ry="12" fill="url(#eyeGrad)" filter="url(#eyeFilter)"/>
+      <!-- Slit pupils -->
+      <ellipse cx="163" cy="100" rx="4" ry="11" fill="#020008"/>
+      <ellipse cx="217" cy="100" rx="4" ry="11" fill="#020008"/>
+      <!-- Pupil inner shine -->
+      <ellipse cx="163" cy="100" rx="1.5" ry="5" fill="#1a0030" opacity="0.6"/>
+      <ellipse cx="217" cy="100" rx="1.5" ry="5" fill="#1a0030" opacity="0.6"/>
+      <!-- Specular highlights -->
+      <ellipse cx="157" cy="93" rx="4" ry="3" fill="#ffffff" opacity="0.7"/>
+      <ellipse cx="211" cy="93" rx="4" ry="3" fill="#ffffff" opacity="0.7"/>
+      <ellipse cx="159" cy="96" rx="2" ry="1.5" fill="#ffffff" opacity="0.4"/>
+      <ellipse cx="213" cy="96" rx="2" ry="1.5" fill="#ffffff" opacity="0.4"/>
+      <!-- Brow crease over eyes -->
+      <path d="M146 88 Q163 82 180 87" stroke="#220038" stroke-width="3" fill="none"/>
+      <path d="M200 87 Q217 82 234 88" stroke="#220038" stroke-width="3" fill="none"/>
+      <!-- Inner brow highlight -->
+      <path d="M148 90 Q163 85 178 89" stroke="#6600aa" stroke-width="1" fill="none" opacity="0.5"/>
+      <path d="M202 89 Q217 85 232 90" stroke="#6600aa" stroke-width="1" fill="none" opacity="0.5"/>
+
+      <!-- ═══ PURPLE BREATH EXHALE ═══ -->
+      <ellipse cx="190" cy="245" rx="22" ry="10" fill="#aa00ee" opacity="0.3" filter="url(#softGlow)"/>
+      <ellipse cx="190" cy="258" rx="16" ry="7" fill="#8800cc" opacity="0.25" filter="url(#softGlow)"/>
+      <ellipse cx="190" cy="270" rx="10" ry="5" fill="#6600aa" opacity="0.18" filter="url(#softGlow)"/>
+
+    </svg>
+  </div>
+
+  <div class="pw-title">Blacklist</div>
+  <div class="pw-subtitle">⚔ &nbsp; Guild Portal &nbsp; ⚔</div>
+
+  <div class="pw-box">
+    <div class="pw-divider"></div>
+    <div class="pw-label">🐉 &nbsp; Speak the sacred word &nbsp; 🐉</div>
+    <input type="password" class="pw-input" id="pwInput" placeholder="••••••••••••" onkeydown="if(event.key==='Enter')checkPassword()">
+    <div class="pw-error" id="pwError"></div>
+    <button class="pw-btn" onclick="checkPassword()">Enter the List</button>
+    <div class="pw-divider"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until password entered) -->
+<div id="mainApp" style="display:none">
+
+<header>
+  <h1>⚔️ Blacklist Adornment Orders</h1>
+  <p>Build your order · Submit to Discord · Track completion</p>
+</header>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('order')">🛒 Place Order</div>
+  <div class="tab" onclick="switchTab('board')">📋 Order Board<span id="pendingBadge"></span></div>
+</div>
+
+<!-- ORDER TAB -->
+<div id="tab-order" class="tab-content active">
+  <div class="container">
+    <div class="name-bar">
+      <label>⚔️ Your Name:</label>
+      <input type="text" id="playerName" placeholder="Enter your character name..." oninput="saveName()">
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search item name or effect..." oninput="filterItems()">
+      <select id="slotFilter" onchange="filterItems()"><option value="">All Slots</option></select>
+      <select id="crafterFilter" onchange="filterItems()"><option value="">All Crafters</option></select>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+    </div>
+    <div id="itemGrid" class="item-grid"></div>
+    <div id="previewSection" style="display:none">
+      <hr class="divider">
+      <div class="preview-grid">
+        <div class="result-box">
+          <h2>👷 Crafters to Contact</h2>
+          <div id="crafterOutput"></div>
+        </div>
+        <div class="result-box">
+          <h2>📦 Total Materials</h2>
+          <div id="materialsOutput"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="submitBtn" onclick="submitOrder()">📨 Submit Order to Discord</button>
+      <p class="note">Posts to #crafting and adds to the Order Board so crafters can see and track it.</p>
+    </div>
+  </div>
+</div>
+
+<!-- BOARD TAB -->
+<div id="tab-board" class="tab-content">
+  <div class="container">
+    <div class="filter-bar">
+      <label>Show:</label>
+      <select id="boardFilter" onchange="renderBoard()">
+        <option value="pending">Pending Only</option>
+        <option value="all">All Orders</option>
+        <option value="completed">Completed</option>
+      </select>
+      <select id="crafterBoardFilter" onchange="renderBoard()"><option value="">All Crafters</option></select>
+      <span class="board-count" id="boardCount"></span>
+      <button class="btn btn-secondary" onclick="loadOrders(true)" style="padding:7px 14px;font-size:0.82em;">🔄 Refresh</button>
+    </div>
+    <div id="orderBoard" class="order-board"></div>
+  </div>
+</div>
+
+</div><!-- end #mainApp -->
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ── Password check (SHA-256 hash of "BlacklistWhitelist") ──
+const CORRECT_HASH = 'a4b2c8d1e5f3a9b7c2d4e6f8a1b3c5d7e9f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0';
+
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPassword() {
+  const input = document.getElementById('pwInput').value;
+  const hash = await hashPassword(input);
+  const stored = await hashPassword('BlacklistWhitelist');
+  if (hash === stored) {
+    sessionStorage.setItem('bl_auth', stored);
+    const screen = document.getElementById('passwordScreen');
+    screen.classList.add('unlocking');
+    setTimeout(() => {
+      screen.style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      listenToOrders();
+    }, 1100);
+  } else {
+    const input = document.getElementById('pwInput');
+    const err = document.getElementById('pwError');
+    input.classList.add('shake');
+    err.textContent = '⚠ The ancient words were spoken incorrectly...';
+    setTimeout(() => { input.classList.remove('shake'); input.value = ''; }, 600);
+  }
+}
+
+async function initAuth() {
+  const stored = await hashPassword('BlacklistWhitelist');
+  if (sessionStorage.getItem('bl_auth') === stored) {
+    document.getElementById('passwordScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+  } else {
+    spawnEmbers();
+  }
+}
+
+function spawnEmbers() {
+  const bg = document.getElementById('pwBg');
+  for (let i = 0; i < 25; i++) {
+    setTimeout(() => {
+      const e = document.createElement('div');
+      e.className = 'ember';
+      const size = Math.random() * 8 + 3;
+      e.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random()*100}%;
+        animation-duration:${Math.random()*8+6}s;
+        animation-delay:${Math.random()*5}s;
+        --drift:${(Math.random()-0.5)*200}px;
+      `;
+      bg.appendChild(e);
+    }, i * 200);
+  }
+}
+
+window.checkPassword = checkPassword;
+
+const WEBHOOK = 'https://blacklist-webhook.ryan-d-guerrero.workers.dev';
+
+// ── Firebase ──
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBSA7VIDkAtRRhzKp28heZxqziwX8Tlvqc",
+  authDomain: "adorn-app.firebaseapp.com",
+  databaseURL: "https://adorn-app-default-rtdb.firebaseio.com",
+  projectId: "adorn-app",
+  storageBucket: "adorn-app.firebasestorage.app",
+  messagingSenderId: "82293514925",
+  appId: "1:82293514925:web:e8f52a73d8631977399c24"
 };
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
+const recipes = [
+  {name:"Luminous Robust Applique",slot:"Chest",effect:"1 power regen",crafter:"Soprana aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby Fragment",powder:"4 Spectral Powder",fuel:"5 Beeswax Candle"},
+  {name:"Scint Prismatic Applique",slot:"Chest",effect:"6 to all stats",crafter:"Dillbert aka Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 flamewrought candles"},
+  {name:"Scint Metaphysical Lining",slot:"Cloak",effect:"3 Power Regen",crafter:"Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Rosewood Kindling"},
+  {name:"Scint Intellectual Backing",slot:"Ear",effect:"14 Int",crafter:"Crunchabunch",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Agile Spurs",slot:"Feet",effect:"14 Agi",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Gritty Spurs",slot:"Feet",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Glancing Splint",slot:"Forearm",effect:"7 Parry",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Reinforced Splint",slot:"Forearm",effect:"67 phys mit",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Savvy Splint",slot:"Forearm",effect:"14 Wis",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Lambent Fast Action Stitching",slot:"Hands",effect:"1 Ranged crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Strand Filament"},
+  {name:"Scint Agile Stitching",slot:"Hands",effect:"14 agi",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint Occult Stitching",slot:"Hands",effect:"25 Spell damage",crafter:"Magis",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Restorative Stitching",slot:"Hands",effect:"40 Increase healing",crafter:"Magis",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Lambent Blessed Imprint",slot:"Head",effect:"1 Heal crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Strand Filament"},
+  {name:"Scint. Epiphanic imprint",slot:"Head",effect:"100 power",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint Brawny Brace",slot:"Legs",effect:"14 Str",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Gritty Brace",slot:"Legs",effect:"14 Sta",crafter:"Chaka aka Angorwynn",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Occult Clasp",slot:"Neck",effect:"25 increase spell damage",crafter:"UNAVAILABLE",hasBook:false,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Judicious Clasp",slot:"Neck",effect:"10 DPS",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Restorative Clasp",slot:"Neck",effect:"40 increase to heals",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Spry Clasp",slot:"Neck",effect:"2 Haste",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Tactical Clasp",slot:"Neck",effect:"1 Melee Crit",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Focus of the pontiff",slot:"Primary",effect:"85 Power from healing proc",weaponType:"Any Primary",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 flamewrought candles"},
+  {name:"Lambent Magi's Second Sight",slot:"Primary",effect:"1 Spell Crit",weaponType:"Any Weapon",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Strand Filament"},
+  {name:"Scint. Clemency of Pontiff",slot:"Primary",effect:"40 Heals",weaponType:"Any Primary",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Pontiff Second Sight",slot:"Primary",effect:"1 Crit heal or ward",weaponType:"Any Primary",crafter:"Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Focus of Magi",slot:"Primary",effect:"85 Power proc",weaponType:"Any Primary",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mystical Incense"},
+  {name:"Scint. Balancing Ayr Stone",slot:"Primary",effect:"2.0% Riposte",weaponType:"One-Handed Slashing",crafter:"Ansel",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Deft Pommel",slot:"Primary",effect:"AE Autoattack 2H",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Proficient Shaft",slot:"Primary",effect:"3 Multiattack",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Judicious Easyloader",slot:"Thrown Only",effect:"10 DPS (Thrown)",crafter:"Magis",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scintillating Judicious Composite Gear",slot:"Ranged Only",effect:"10 DPS (Ranged/Bow)",crafter:"BigP",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Lambent Rugged Polish",slot:"Ring",effect:"70 Health",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl Fragment",powder:"1 Vision Powder",fuel:"6 Bayberry Candles"},
+  {name:"Lambent Epiphanic Polish",slot:"Ring",effect:"70 Power",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl Fragment",powder:"1 Vision Powder",fuel:"6 Bayberry Candles"},
+  {name:"Luminous Blessed Strut",slot:"Secondary Only",effect:"1% Heal Crit",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Natural Mana",infusion:"2 Infusion of Nightmares",fragment:"4 Ruby Fragment",powder:"4 Spectral Powder",fuel:"5 Diamond Sandpaper"},
+  {name:"Lambent Balanced Strut",slot:"Secondary Only",effect:"1% Block (Shield Only)",crafter:"Caustic aka Nuggies",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl Fragment",powder:"6 Vision Powder",fuel:"6 Crystalline Sandpaper"},
+  {name:"Scint. Focus of the pontiff (2nd)",slot:"Secondary Only",effect:"85 Power from healing proc",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 flamewrought candles"},
+  {name:"Scint. Clemency of Pontiff (2nd)",slot:"Secondary Only",effect:"40 Heals",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Arcane Ornament",slot:"Secondary Only",effect:"25 arcane increase dmg",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Elemental Ornament",slot:"Secondary Only",effect:"25 elemental increase",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scintillating Spiked Strut",slot:"Secondary Only",effect:"45 Piercing Dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Glacial Ornament",slot:"Secondary or Ranged",effect:"45 Cold damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Metaphysical Ornament",slot:"Secondary or Ranged",effect:"2 power regen",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Molten Ornament",slot:"Secondary or Ranged",effect:"45 Heat damage increase",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Nox. Ornament",slot:"Secondary or Ranged",effect:"25 Nox damage",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Runic Ornament",slot:"Secondary or Ranged",effect:"45 magic damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Spellbound Ornament",slot:"Secondary or Ranged",effect:"1 spell crit",crafter:"Pompeii aka Nuggies",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint Telekinetic Ornament",slot:"Secondary or Ranged",effect:"45 mental damage",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Viral Ornament",slot:"Secondary or Ranged",effect:"45 disease dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Serpentine Ornament",slot:"Secondary or Ranged",effect:"45 poison dmg",crafter:"Pompeii aka Nuggies",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Acrylia Paper"},
+  {name:"Scint. Brawny Straps",slot:"Shoulder",effect:"14 str",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Gritty Strap",slot:"Shoulder",effect:"14 sta",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Rugged Straps",slot:"Shoulder",effect:"100 HP",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+  {name:"Scint. Fast Action buckle",slot:"Waist",effect:"1 ranged crit",crafter:"Chaka aka Angorwynn",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Spry Buckle",slot:"Waist",effect:"2 haste",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Oscillating Fastening",slot:"Wrist",effect:"Heal Reactive (Parry)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Reactive Fastening",slot:"Wrist",effect:"Heal Reactive (Riposte)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Diverting Fastening",slot:"Wrist",effect:"Heal Reactive (Deflect)",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Bituminous Coal"},
+  {name:"Scint Brawny Fastening",slot:"Wrist",effect:"14 Str",crafter:"Nuggies",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Balanced Fastening",slot:"Wrist",effect:"2% Parry",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar Fragments",powder:"8 Illusionary Powder",fuel:"7 Mystical Incense"},
+  {name:"Scint Intellectual Fastening",slot:"Wrist",effect:"14 Int",crafter:"Magis",hasBook:true,fragment:"9 Lunar Fragments",powder:"1 Illusionary Powder",fuel:"7 Mythical Filament"},
+];
+
+const quantities = {};
+let orders = [];
+
+function parseMat(str) {
+  if (!str) return null;
+  const m = str.match(/^(\d+)\s+(.+)/);
+  return m ? {qty: parseInt(m[1]), name: m[2].trim()} : {qty: 1, name: str.trim()};
+}
+function addMat(totals, str, mult) {
+  if (!str) return;
+  const mat = parseMat(str);
+  const key = mat.name.toLowerCase();
+  if (!totals[key]) totals[key] = {name: mat.name, qty: 0};
+  totals[key].qty += mat.qty * mult;
+}
+function buildSummary() {
+  const byCrafter = {}, matTotals = {}, matByCrafter = {};
+  Object.entries(quantities).filter(([,v]) => v > 0).forEach(([idx, qty]) => {
+    const r = recipes[idx];
+    if (!byCrafter[r.crafter]) { byCrafter[r.crafter] = []; matByCrafter[r.crafter] = {}; }
+    byCrafter[r.crafter].push({name: r.name, qty, weaponType: r.weaponType||null});
+    ['mana','infusion','fragment','powder','fuel'].forEach(k => {
+      addMat(matTotals, r[k], qty);
+      addMat(matByCrafter[r.crafter], r[k], qty);
+    });
+  });
+  return {byCrafter, matTotals, matByCrafter};
+}
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+function saveName() {
+  try { localStorage.setItem('bl_name', document.getElementById('playerName').value); } catch(e){}
+}
+function timeAgo(ts) {
+  const d = Date.now() - ts;
+  if (d < 60000) return 'just now';
+  if (d < 3600000) return Math.floor(d/60000) + 'm ago';
+  if (d < 86400000) return Math.floor(d/3600000) + 'h ago';
+  return Math.floor(d/86400000) + 'd ago';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['order','board'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'board') loadOrders();
+}
+
+// Build filter dropdowns
+const slots = [...new Set(recipes.map(r => r.slot))].sort();
+const crafters = [...new Set(recipes.map(r => r.crafter))].sort();
+slots.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; document.getElementById('slotFilter').appendChild(o); });
+crafters.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; document.getElementById('crafterFilter').appendChild(o); });
+crafters.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; document.getElementById('crafterBoardFilter').appendChild(o); });
+
+function filterItems() {
+  const s = document.getElementById('searchInput').value.toLowerCase();
+  const slot = document.getElementById('slotFilter').value;
+  const cr = document.getElementById('crafterFilter').value;
+  renderItems(recipes.filter(r =>
+    (!s || r.name.toLowerCase().includes(s) || r.effect.toLowerCase().includes(s)) &&
+    (!slot || r.slot === slot) && (!cr || r.crafter === cr)
+  ));
+}
+function renderItems(list) {
+  const grid = document.getElementById('itemGrid');
+  grid.innerHTML = '';
+  if (!list.length) { grid.innerHTML='<div class="empty-state">No items match your filter.</div>'; return; }
+  list.forEach(r => {
+    const idx = recipes.indexOf(r);
+    const qty = quantities[idx] || 0;
+    const card = document.createElement('div');
+    card.className = 'item-card' + (qty > 0 ? ' selected' : '');
+    card.innerHTML = `
+      <div class="slot">${r.slot}</div>
+      <h3>${r.name}</h3>
+      <div class="effect">✦ ${r.effect}</div>
+      <div class="crafter">🔨 ${r.crafter}</div>
+      ${r.weaponType ? `<div class="weapon-type${r.weaponType==='TBD'?' weapon-tbd':''}">🗡️ ${r.weaponType}</div>` : ''}
+      ${!r.hasBook ? '<div class="no-book">⚠️ Book unavailable (Weaponsmith)</div>' : ''}
+      <div class="qty-control">
+        <button onclick="changeQty(${idx},-1,event)">−</button>
+        <div class="qty-display">${qty}</div>
+        <button onclick="changeQty(${idx},1,event)">+</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+function changeQty(idx, delta, e) {
+  e.stopPropagation();
+  quantities[idx] = Math.max(0, (quantities[idx]||0) + delta);
+  filterItems(); updatePreview();
+}
+function clearAll() {
+  Object.keys(quantities).forEach(k => delete quantities[k]);
+  filterItems(); updatePreview();
+}
+function updatePreview() {
+  const hasItems = Object.values(quantities).some(v => v > 0);
+  document.getElementById('previewSection').style.display = hasItems ? 'block' : 'none';
+  if (!hasItems) return;
+  const {byCrafter, matTotals, matByCrafter} = buildSummary();
+  const co = document.getElementById('crafterOutput');
+  co.innerHTML = '';
+  Object.entries(byCrafter).sort().forEach(([cr, items]) => {
+    const crafterMats = matByCrafter[cr];
+    const sec = document.createElement('div');
+    sec.className = 'crafter-section';
+    sec.innerHTML = `<h3>✉️ ${cr}</h3>` +
+      items.map(i => `<div class="crafter-item"><span class="item-name">${i.name}${i.weaponType ? ` <span style="color:#c9a227;font-size:0.9em">(${i.weaponType})</span>` : ''}</span><span class="qty-badge">x${i.qty}</span></div>`).join('') +
+      `<div class="crafter-mats-label">Materials for ${cr.split(' ')[0]}:</div>` +
+      Object.values(crafterMats).sort((a,b)=>a.name.localeCompare(b.name))
+        .map(m=>`<div class="crafter-mat-row"><span>${m.name}</span><span class="mat-qty-sm">×${m.qty}</span></div>`).join('');
+    co.appendChild(sec);
+  });
+  document.getElementById('materialsOutput').innerHTML = Object.values(matTotals)
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(m=>`<div class="mat-row"><span class="mat-name">${m.name}</span><span class="mat-qty">×${m.qty}</span></div>`).join('');
+}
+
+// ── Firebase order functions ──
+function listenToOrders() {
+  const q = query(collection(db, 'orders'), orderBy('timestamp', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    orders = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+    renderBoard();
+    updatePendingBadge();
+  }, (err) => {
+    console.error('Firestore error:', err);
+    showToast('Could not connect to order database.', 'error');
+  });
+}
+
+async function loadOrders(showFeedback=false) {
+  try {
+    const snapshot = await getDocs(query(collection(db, 'orders'), orderBy('timestamp', 'desc')));
+    orders = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+  } catch(e) { orders = []; }
+  renderBoard();
+  updatePendingBadge();
+  if (showFeedback) showToast('Orders refreshed!');
+}
+
+function updatePendingBadge() {
+  const n = orders.filter(o=>o.status==='pending').length;
+  document.getElementById('pendingBadge').textContent = n > 0 ? ` (${n})` : '';
+}
+
+// ── Submit ──
+async function submitOrder() {
+  const name = document.getElementById('playerName').value.trim();
+  if (!name) { showToast('Please enter your character name first!','error'); return; }
+  if (!Object.values(quantities).some(v=>v>0)) { showToast('No items selected!','error'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting...';
+
+  const {byCrafter, matTotals} = buildSummary();
+
+  // Discord message
+  let msg = `## 📦 New Adornment Order — **${name}**\n`;
+  Object.entries(byCrafter).sort().forEach(([cr, items]) => {
+    msg += `\n**✉️ ${cr}:**\n`;
+    items.forEach(i => msg += `> • ${i.name}${i.weaponType ? ` (${i.weaponType})` : ''} ×${i.qty}\n`);
+  });
+  msg += `\n**📦 Materials needed:**\n`;
+  Object.values(matTotals).sort((a,b)=>a.name.localeCompare(b.name))
+    .forEach(m => msg += `> • ${m.name}: ×${m.qty}\n`);
+  msg += `\n*Use the Order Board to mark complete when done.*`;
+
+  try {
+    // Step 1: Save to Firebase (critical)
+    await addDoc(collection(db, 'orders'), {
+      player: name,
+      timestamp: Date.now(),
+      status: 'pending',
+      byCrafter,
+      matTotals
+    });
+
+    // Step 2: Post to Discord via Cloudflare Worker (non-critical — don't let it block)
+    fetch(WEBHOOK, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({content: msg, username: 'Blacklist Adorns'})
+    }).then(res => {
+      if (res.ok || res.status === 204) {
+        showToast('✅ Order saved and posted to #crafting!');
+      } else {
+        showToast('✅ Order saved! (Discord ping failed — check Worker)', 'error');
+      }
+    }).catch(() => {
+      showToast('✅ Order saved! (Discord ping failed — check Worker)', 'error');
+    });
+
+    // Reset and switch tab immediately after Firebase save succeeds
+    btn.disabled = false;
+    btn.innerHTML = '📨 Submit Order to Discord';
+    clearAll();
+    switchTab('board');
+
+  } catch(e) {
+    console.error(e);
+    showToast('Could not save order. Check connection.','error');
+    btn.disabled = false;
+    btn.innerHTML = '📨 Submit Order to Discord';
+  }
+}
+
+// ── Board ──
+function renderBoard() {
+  const filter = document.getElementById('boardFilter').value;
+  const crafterF = document.getElementById('crafterBoardFilter').value;
+  const filtered = orders.filter(o => {
+    if (filter==='pending' && o.status!=='pending') return false;
+    if (filter==='completed' && o.status!=='completed') return false;
+    if (crafterF && !o.byCrafter[crafterF]) return false;
+    return true;
+  });
+  document.getElementById('boardCount').textContent = `${filtered.length} order${filtered.length!==1?'s':''}`;
+  const board = document.getElementById('orderBoard');
+  if (!filtered.length) {
+    board.innerHTML = `<div class="empty-board">No orders here yet.<br><br>Guild members can submit orders using the <strong>Place Order</strong> tab — they'll show up here in real time.</div>`;
+    return;
+  }
+  board.innerHTML = '';
+  filtered.forEach(order => {
+    const card = document.createElement('div');
+    card.className = 'order-card' + (order.status==='completed' ? ' completed' : '');
+    const crafterHtml = Object.entries(order.byCrafter).sort().map(([cr, items]) => `
+      <div class="order-crafter-block">
+        <div class="order-crafter-label">✉️ ${cr}</div>
+        ${items.map(i=>`<div class="order-item-line">• ${i.name} <span class="qty-badge">×${i.qty}</span>${i.weaponType ? ` <span style="color:#c9a227;font-size:0.85em">(${i.weaponType})</span>` : ''}</div>`).join('')}
+      </div>`).join('');
+    card.innerHTML = `
+      <div class="order-header">
+        <div>
+          <div class="order-who">⚔️ ${order.player}</div>
+          <div class="order-time">${timeAgo(order.timestamp)}</div>
+        </div>
+        <span class="order-status ${order.status==='pending'?'status-pending':'status-done'}">
+          ${order.status==='pending'?'⏳ Pending':'✅ Complete'}
+        </span>
+      </div>
+      ${crafterHtml}
+      <div class="order-actions">
+        ${order.status==='pending' ? `<button class="btn-sm-complete" onclick="markComplete('${order.id}')">✅ Mark Complete</button>` : ''}
+        <button class="btn-sm-danger" onclick="deleteOrder('${order.id}')">🗑 Delete</button>
+      </div>`;
+    board.appendChild(card);
+  });
+}
+
+async function markComplete(id) {
+  const o = orders.find(o=>o.id===id);
+  if (!o) return;
+  try {
+    await updateDoc(doc(db, 'orders', id), {status: 'completed'});
+    fetch(WEBHOOK, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({content:`✅ **${o.player}'s** adornment order has been marked **complete**!`, username:'Blacklist Adorns'})
+    }).catch(()=>{});
+    showToast(`${o.player}'s order marked complete!`);
+  } catch(e) { showToast('Failed to update order.','error'); }
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Delete this order?')) return;
+  try {
+    await deleteDoc(doc(db, 'orders', id));
+    showToast('Order deleted.');
+  } catch(e) { showToast('Failed to delete order.','error'); }
+}
+
+// Init
+try { const n=localStorage.getItem('bl_name'); if(n) document.getElementById('playerName').value=n; } catch(e){}
+renderItems(recipes);
+initAuth();
+
+// Expose functions needed by inline HTML onclick handlers
+window.switchTab = switchTab;
+window.filterItems = filterItems;
+window.changeQty = changeQty;
+window.clearAll = clearAll;
+window.submitOrder = submitOrder;
+window.renderBoard = renderBoard;
+window.loadOrders = loadOrders;
+window.markComplete = markComplete;
+window.deleteOrder = deleteOrder;
+window.saveName = saveName;
+</script>
+</body>
+</html>
