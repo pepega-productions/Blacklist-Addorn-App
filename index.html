@@ -33,6 +33,8 @@
   .item-card .effect { color: #90ee90; font-size: 0.78em; margin: 3px 0; }
   .item-card .crafter { color: #ff9a7b; font-size: 0.73em; }
   .item-card .no-book { color: #ff6b6b; font-size: 0.7em; font-style: italic; }
+  .item-card .weapon-type { color: #c9a227; font-size: 0.72em; margin: 2px 0; background: #c9a22718; border: 1px solid #c9a22740; border-radius: 4px; padding: 1px 5px; display: inline-block; }
+  .item-card .weapon-tbd { color: #888; border-color: #44444488; background: #44444418; }
   .qty-control { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 4px; }
   .qty-control button { background: #0f3460; border: 1px solid #e94560; color: #e94560; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 1em; line-height: 1; }
   .qty-control button:hover { background: #e94560; color: white; }
@@ -180,14 +182,14 @@ const recipes = [
   {name:"Scint. Restorative Clasp",slot:"Neck",effect:"40 increase to heals",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
   {name:"Scint Spry Clasp",slot:"Neck",effect:"2 Haste",crafter:"Crunchabunch",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
   {name:"Scint Tactical Clasp",slot:"Neck",effect:"1 Melee Crit",crafter:"Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Focus of the pontiff",slot:"Primary",effect:"85 Power from healing proc",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
-  {name:"Lambent Magi's Second Sight",slot:"Primary",effect:"1 Spell Crit",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
-  {name:"Scint. Clemency of Pontiff",slot:"Primary",effect:"40 Heals",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint. Pontiff Second Sight",slot:"Primary",effect:"1 Crit heal or ward",crafter:"Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Rosewood Kindling"},
-  {name:"Scint. Focus of Magi",slot:"Primary",effect:"85 Power proc",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mystical Incense"},
-  {name:"Scint. Balancing Ayr Stone",slot:"Primary",effect:"2.0% Riposte",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Deft Pommel",slot:"Primary",effect:"AE Autoattack 2H",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
-  {name:"Scint Proficient Shaft",slot:"Primary",effect:"3 Multiattack",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Focus of the pontiff",slot:"Primary",effect:"85 Power from healing proc",weaponType:"Any Primary",crafter:"Dillbert aka Crunchabunch",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 flamewrought candles"},
+  {name:"Lambent Magi's Second Sight",slot:"Primary",effect:"1 Spell Crit",weaponType:"Any Weapon",crafter:"Magis",hasBook:true,mana:"1 Coalesced Mana",infusion:"2 Infusion of Daydreams",fragment:"5 Pearl",powder:"6 Vision",fuel:"6 Strand Filament"},
+  {name:"Scint. Clemency of Pontiff",slot:"Primary",effect:"40 Heals",weaponType:"Any Primary",crafter:"Chaka aka Angorwynn",hasBook:true,infusion:"1 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint. Pontiff Second Sight",slot:"Primary",effect:"1 Crit heal or ward",weaponType:"Any Primary",crafter:"Nuggies",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Rosewood Kindling"},
+  {name:"Scint. Focus of Magi",slot:"Primary",effect:"85 Power proc",weaponType:"Any Primary",crafter:"Ansel / Subpar",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mystical Incense"},
+  {name:"Scint. Balancing Ayr Stone",slot:"Primary",effect:"2.0% Riposte",weaponType:"One-Handed Slashing",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Deft Pommel",slot:"Primary",effect:"AE Autoattack 2H",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
+  {name:"Scint Proficient Shaft",slot:"Primary",effect:"3 Multiattack",weaponType:"TBD",crafter:"Ansel",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
   {name:"Scint. Judicious Easyloader",slot:"Thrown Only",effect:"10 DPS (Thrown)",crafter:"Magis",hasBook:true,mana:"1 Hardened mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Mythical Filament"},
   {name:"Scintillating Judicious Composite Gear",slot:"Ranged Only",effect:"10 DPS (Ranged/Bow)",crafter:"BigP",hasBook:true,mana:"1 Hardened Mana",infusion:"2 Infusion of Illusion",fragment:"5 Lunar",powder:"8 Illusionary",fuel:"7 Bituminous Coal"},
   {name:"Lambent Rugged Polish",slot:"Ring",effect:"70 Health",crafter:"Soprana aka Nuggies",hasBook:true,fragment:"9 Pearl",powder:"1 Vision",fuel:"6 bayberry candles"},
@@ -241,7 +243,7 @@ function buildSummary() {
   Object.entries(quantities).filter(([,v]) => v > 0).forEach(([idx, qty]) => {
     const r = recipes[idx];
     if (!byCrafter[r.crafter]) byCrafter[r.crafter] = [];
-    byCrafter[r.crafter].push({name: r.name, qty});
+    byCrafter[r.crafter].push({name: r.name, qty, weaponType: r.weaponType||null});
     ['mana','infusion','fragment','powder','fuel'].forEach(k => addMat(matTotals, r[k], qty));
   });
   return {byCrafter, matTotals};
@@ -299,6 +301,7 @@ function renderItems(list) {
       <h3>${r.name}</h3>
       <div class="effect">✦ ${r.effect}</div>
       <div class="crafter">🔨 ${r.crafter}</div>
+      ${r.weaponType ? `<div class="weapon-type${r.weaponType==='TBD'?' weapon-tbd':''}">🗡️ ${r.weaponType}</div>` : ''}
       ${!r.hasBook ? '<div class="no-book">⚠️ Book unavailable (Weaponsmith)</div>' : ''}
       <div class="qty-control">
         <button onclick="changeQty(${idx},-1,event)">−</button>
@@ -427,7 +430,7 @@ function renderBoard() {
     const crafterHtml = Object.entries(order.byCrafter).sort().map(([cr, items]) => `
       <div class="order-crafter-block">
         <div class="order-crafter-label">✉️ ${cr}</div>
-        ${items.map(i=>`<div class="order-item-line">• ${i.name} <span class="qty-badge">×${i.qty}</span></div>`).join('')}
+        ${items.map(i=>`<div class="order-item-line">• ${i.name} <span class="qty-badge">×${i.qty}</span>${i.weaponType ? ` <span style="color:#c9a227;font-size:0.85em">(${i.weaponType})</span>` : ''}</div>`).join('')}
       </div>`).join('');
     card.innerHTML = `
       <div class="order-header">
