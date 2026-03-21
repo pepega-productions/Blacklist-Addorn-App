@@ -831,15 +831,18 @@ async function submitOrder() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Submitting...';
 
-  const {byCrafter, matTotals} = buildSummary();
+  const {byCrafter, matTotals, matByCrafter} = buildSummary();
 
-  // Discord message
+  // Discord message — items + materials per crafter, then grand total
   let msg = `## 📦 New Adornment Order — **${name}**\n`;
   Object.entries(byCrafter).sort().forEach(([cr, items]) => {
     msg += `\n**✉️ ${cr}:**\n`;
     items.forEach(i => msg += `> • ${i.name}${i.weaponType ? ` (${i.weaponType})` : ''} ×${i.qty}\n`);
+    msg += `> 📦 *Materials:*\n`;
+    Object.values(matByCrafter[cr]).sort((a,b)=>a.name.localeCompare(b.name))
+      .forEach(m => msg += `> ∙ ${m.name}: ×${m.qty}\n`);
   });
-  msg += `\n**📦 Materials needed:**\n`;
+  msg += `\n**📦 Total Materials (all crafters):**\n`;
   Object.values(matTotals).sort((a,b)=>a.name.localeCompare(b.name))
     .forEach(m => msg += `> • ${m.name}: ×${m.qty}\n`);
   msg += `\n*Use the Order Board to mark complete when done.*`;
@@ -851,7 +854,8 @@ async function submitOrder() {
       timestamp: Date.now(),
       status: 'pending',
       byCrafter,
-      matTotals
+      matTotals,
+      matByCrafter
     });
 
     // Step 2: Post to Discord via Cloudflare Worker (non-critical — don't let it block)
@@ -903,11 +907,15 @@ function renderBoard() {
   filtered.forEach(order => {
     const card = document.createElement('div');
     card.className = 'order-card' + (order.status==='completed' ? ' completed' : '');
-    const crafterHtml = Object.entries(order.byCrafter).sort().map(([cr, items]) => `
+    const crafterHtml = Object.entries(order.byCrafter).sort().map(([cr, items]) => {
+      const mats = order.matByCrafter ? order.matByCrafter[cr] : null;
+      return `
       <div class="order-crafter-block">
         <div class="order-crafter-label">✉️ ${cr}</div>
         ${items.map(i=>`<div class="order-item-line">• ${i.name} <span class="qty-badge">×${i.qty}</span>${i.weaponType ? ` <span style="color:#c9a227;font-size:0.85em">(${i.weaponType})</span>` : ''}</div>`).join('')}
-      </div>`).join('');
+        ${mats ? `<div class="crafter-mats-label">📦 Materials for ${cr.split(' ')[0]}:</div>${Object.values(mats).sort((a,b)=>a.name.localeCompare(b.name)).map(m=>`<div class="crafter-mat-row"><span>${m.name}</span><span class="mat-qty-sm">×${m.qty}</span></div>`).join('')}` : ''}
+      </div>`;
+    }).join('');
     card.innerHTML = `
       <div class="order-header">
         <div>
