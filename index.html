@@ -161,7 +161,13 @@
   .order-board { display: flex; flex-direction: column; gap: 14px; }
   .order-card { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 16px; }
   .order-card.completed { opacity: 0.5; border-color: #27ae60; }
-  .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 6px; }
+  .order-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 6px; cursor: pointer; user-select: none; }
+  .order-header:hover .order-who { color: #e0c060; }
+  .order-toggle { color: #555; font-size: 0.8em; margin-top: 4px; transition: transform 0.2s; }
+  .order-toggle.open { transform: rotate(180deg); }
+  .order-body { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+  .order-body.open { max-height: 2000px; }
+  .order-body-inner { padding-top: 12px; }
   .order-who { font-size: 1em; color: #c9a227; font-weight: bold; }
   .order-time { font-size: 0.75em; color: #666; margin-top: 2px; }
   .order-status { font-size: 0.75em; padding: 3px 10px; border-radius: 10px; }
@@ -833,19 +839,20 @@ async function submitOrder() {
 
   const {byCrafter, matTotals, matByCrafter} = buildSummary();
 
-  // Discord message — items + materials per crafter, then grand total
+  // Discord message — crafters and items only, short and clean
   let msg = `## 📦 New Adornment Order — **${name}**\n`;
   Object.entries(byCrafter).sort().forEach(([cr, items]) => {
     msg += `\n**✉️ ${cr}:**\n`;
     items.forEach(i => msg += `> • ${i.name}${i.weaponType ? ` (${i.weaponType})` : ''} ×${i.qty}\n`);
-    msg += `> 📦 *Materials:*\n`;
-    Object.values(matByCrafter[cr]).sort((a,b)=>a.name.localeCompare(b.name))
-      .forEach(m => msg += `> ∙ ${m.name}: ×${m.qty}\n`);
   });
-  msg += `\n**📦 Total Materials (all crafters):**\n`;
-  Object.values(matTotals).sort((a,b)=>a.name.localeCompare(b.name))
-    .forEach(m => msg += `> • ${m.name}: ×${m.qty}\n`);
-  msg += `\n*Use the Order Board to mark complete when done.*`;
+
+  // Every 3rd order remind crafters to check the order board
+  const orderCount = orders.filter(o => o.status === 'pending').length + 1;
+  if (orderCount % 3 === 0) {
+    msg += `\n📋 *Reminder: Check the Order Board for all pending orders and material breakdowns!*`;
+  } else {
+    msg += `\n*Check the Order Board for full material details.*`;
+  }
 
   try {
     // Step 1: Save to Firebase (critical)
@@ -916,23 +923,39 @@ function renderBoard() {
         ${mats ? `<div class="crafter-mats-label">📦 Materials for ${cr.split(' ')[0]}:</div>${Object.values(mats).sort((a,b)=>a.name.localeCompare(b.name)).map(m=>`<div class="crafter-mat-row"><span>${m.name}</span><span class="mat-qty-sm">×${m.qty}</span></div>`).join('')}` : ''}
       </div>`;
     }).join('');
+    const cardId = 'card-' + order.id;
     card.innerHTML = `
-      <div class="order-header">
+      <div class="order-header" onclick="toggleCard('${cardId}')">
         <div>
           <div class="order-who">⚔️ ${order.player}</div>
           <div class="order-time">${timeAgo(order.timestamp)}</div>
         </div>
-        <span class="order-status ${order.status==='pending'?'status-pending':'status-done'}">
-          ${order.status==='pending'?'⏳ Pending':'✅ Complete'}
-        </span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="order-status ${order.status==='pending'?'status-pending':'status-done'}">
+            ${order.status==='pending'?'⏳ Pending':'✅ Complete'}
+          </span>
+          <span class="order-toggle" id="toggle-${cardId}">▼</span>
+        </div>
       </div>
-      ${crafterHtml}
-      <div class="order-actions">
-        ${order.status==='pending' ? `<button class="btn-sm-complete" onclick="markComplete('${order.id}')">✅ Mark Complete</button>` : ''}
-        <button class="btn-sm-danger" onclick="deleteOrder('${order.id}')">🗑 Delete</button>
+      <div class="order-body" id="${cardId}">
+        <div class="order-body-inner">
+          ${crafterHtml}
+          <div class="order-actions">
+            ${order.status==='pending' ? `<button class="btn-sm-complete" onclick="markComplete('${order.id}')">✅ Mark Complete</button>` : ''}
+            <button class="btn-sm-danger" onclick="deleteOrder('${order.id}')">🗑 Delete</button>
+          </div>
+        </div>
       </div>`;
     board.appendChild(card);
   });
+}
+
+function toggleCard(cardId) {
+  const body = document.getElementById(cardId);
+  const toggle = document.getElementById('toggle-' + cardId);
+  if (!body) return;
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
 }
 
 async function markComplete(id) {
@@ -961,6 +984,7 @@ renderItems(recipes);
 initAuth();
 
 // Expose functions needed by inline HTML onclick handlers
+window.toggleCard = toggleCard;
 window.switchTab = switchTab;
 window.filterItems = filterItems;
 window.changeQty = changeQty;
