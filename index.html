@@ -530,20 +530,13 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-// ── Password check (SHA-256 hash of "BlacklistWhitelist") ──
-const CORRECT_HASH = 'a4b2c8d1e5f3a9b7c2d4e6f8a1b3c5d7e9f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0';
-
-async function hashPassword(pw) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
+// ── Password check ──
+const PW = atob('QmxhY2tsaXN0V2hpdGVsaXN0');
 
 async function checkPassword() {
   const input = document.getElementById('pwInput').value;
-  const hash = await hashPassword(input);
-  const stored = await hashPassword('BlacklistWhitelist');
-  if (hash === stored) {
-    sessionStorage.setItem('bl_auth', stored);
+  if (input === PW) {
+    sessionStorage.setItem('bl_auth', PW);
     const screen = document.getElementById('passwordScreen');
     screen.classList.add('unlocking');
     setTimeout(() => {
@@ -552,19 +545,19 @@ async function checkPassword() {
       listenToOrders();
     }, 1100);
   } else {
-    const input = document.getElementById('pwInput');
+    const inp = document.getElementById('pwInput');
     const err = document.getElementById('pwError');
-    input.classList.add('shake');
+    inp.classList.add('shake');
     err.textContent = '⚠ The ancient words were spoken incorrectly...';
-    setTimeout(() => { input.classList.remove('shake'); input.value = ''; }, 600);
+    setTimeout(() => { inp.classList.remove('shake'); inp.value = ''; }, 600);
   }
 }
 
 async function initAuth() {
-  const stored = await hashPassword('BlacklistWhitelist');
-  if (sessionStorage.getItem('bl_auth') === stored) {
+  if (sessionStorage.getItem('bl_auth') === PW) {
     document.getElementById('passwordScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
+    listenToOrders();
   } else {
     spawnEmbers();
   }
